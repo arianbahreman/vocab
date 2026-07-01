@@ -1,41 +1,45 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { BookOpen, Languages, GraduationCap, AlertCircle, Clock, Flame, Plus, Play } from "lucide-react"
+  BookOpen,
+  Languages,
+  GraduationCap,
+  AlertCircle,
+  Clock,
+  Flame,
+  Plus,
+  Play,
+} from "lucide-react";
 
 interface DashboardData {
-  total: number
-  english: number
-  french: number
-  lowScore: number
-  due: number
-  streak: number
+  total: number;
+  english: number;
+  french: number;
+  lowScore: number;
+  due: number;
+  streak: number;
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/vocabulary?dashboard=true")
       .then((r) => r.json())
       .then((d) => setData(d))
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => setLoading(false));
+  }, []);
 
-  if (loading) return <p className="text-muted-foreground">Loading...</p>
+  if (loading) return <p className="text-muted-foreground">Loading...</p>;
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Dashboard</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -120,5 +124,5 @@ export default function DashboardPage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }
