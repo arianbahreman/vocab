@@ -423,7 +423,7 @@ function FlashcardsContent() {
               <span className="flex items-center gap-1.5">
                 {Icon && <Icon className="size-5" />}
                 {label}
-                <kbd className="ml-1 rounded border border-current/20 bg-current/10 px-1 text-[10px] leading-none opacity-60">
+                <kbd className="ml-1 flex size-5 items-center justify-center rounded bg-current/10 text-[10px] leading-none opacity-60">
                   {shortcut}
                 </kbd>
               </span>
