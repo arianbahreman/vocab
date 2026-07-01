@@ -1,17 +1,18 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,14 +20,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Plus,
   Search,
@@ -43,31 +39,35 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react"
-import { VOCAB_TYPES } from "@/lib/vocab"
+} from "lucide-react";
+import { VOCAB_TYPES } from "@/lib/vocab";
 
 interface VocabularyItem {
-  id: string
-  language: string
-  type: string
-  original: string
-  meaning: string
-  score: number
+  id: string;
+  language: string;
+  type: string;
+  original: string;
+  meaning: string;
+  score: number;
 }
 
 function DeleteButton({
   item,
   onDelete,
   setDeleteId,
+  size = "icon-sm",
 }: {
-  item: VocabularyItem
-  onDelete: () => void
-  setDeleteId: (id: string | null) => void
+  item: VocabularyItem;
+  onDelete: () => void;
+  setDeleteId: (id: string | null) => void;
+  size?: "icon-sm" | "icon-lg";
 }) {
   return (
     <Dialog>
       <DialogTrigger
-        render={<Button variant="ghost" size="icon-sm" className="text-destructive" />}
+        render={
+          <Button variant="ghost" size={size} className="text-destructive" />
+        }
         onClick={() => setDeleteId(item.id)}
       >
         <Trash2 className="size-3.5" />
@@ -91,55 +91,52 @@ function DeleteButton({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 export default function VocabularyPage() {
-  const [items, setItems] = useState<VocabularyItem[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [search, setSearch] = useState("")
-  const [language, setLanguage] = useState("")
-  const [type, setType] = useState("")
-  const [sort, setSort] = useState("newest")
-  const [loading, setLoading] = useState(true)
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-  const router = useRouter()
+  const [items, setItems] = useState<VocabularyItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const [language, setLanguage] = useState("");
+  const [type, setType] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const router = useRouter();
 
-  function fetchData() {
-    setLoading(true)
-    const params = new URLSearchParams()
-    if (search) params.set("search", search)
-    if (language) params.set("language", language)
-    if (type) params.set("type", type)
-    params.set("sort", sort)
-    params.set("page", String(page))
+  const fetchData = useCallback(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set("search", debouncedSearch);
+    if (language) params.set("language", language);
+    if (type) params.set("type", type);
+    params.set("sort", sort);
+    params.set("page", String(page));
 
-    fetch(`/api/vocabulary?${params}`)
+    return fetch(`/api/vocabulary?${params}`)
       .then((r) => r.json())
       .then((d) => {
-        setItems(d.items)
-        setTotal(d.total)
-        setTotalPages(d.totalPages)
-      })
-      .finally(() => setLoading(false))
-  }
+        setItems(d.items);
+        setTotal(d.total);
+        setTotalPages(d.totalPages);
+      });
+  }, [debouncedSearch, language, type, sort, page]);
 
   useEffect(() => {
-    fetchData()
-  }, [page, sort])
-
-  function handleSearch() {
-    setPage(1)
-    fetchData()
-  }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
+  }, [fetchData]);
 
   async function handleDelete() {
-    if (!deleteId) return
-    await fetch(`/api/vocabulary/${deleteId}`, { method: "DELETE" })
-    setDeleteId(null)
-    fetchData()
+    if (!deleteId) return;
+    await fetch(`/api/vocabulary/${deleteId}`, { method: "DELETE" });
+    setDeleteId(null);
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
   }
 
   return (
@@ -151,7 +148,6 @@ export default function VocabularyPage() {
           className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80"
         >
           <Plus className="size-4" />
-          Add Word
         </Link>
       </div>
 
@@ -160,46 +156,64 @@ export default function VocabularyPage() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="w-48 pl-8"
-                />
-              </div>
-              <Button variant="secondary" onClick={handleSearch}>
-                <Search className="size-4" />
-                Search
-              </Button>
+          <div className="flex flex-col gap-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full pl-8"
+              />
             </div>
-            <Select value={language} onValueChange={(v) => { setLanguage(v ?? ""); setPage(1); setTimeout(fetchData, 0) }}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="english">English</SelectItem>
-                <SelectItem value="french">French</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={type} onValueChange={(v) => { setType(v ?? ""); setPage(1); setTimeout(fetchData, 0) }}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
+            <div className="flex gap-4">
+              <Select
+                value={language}
+                onValueChange={(v) => {
+                  setLanguage(v ?? "");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="english">English</SelectItem>
+                  <SelectItem value="french">French</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={type}
+                onValueChange={(v) => {
+                  setType(v ?? "");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {VOCAB_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
-            </Select>
-            <Select value={sort} onValueChange={(v) => { setSort(v ?? "newest"); setPage(1) }}>
-              <SelectTrigger className="w-36">
+              </Select>
+            </div>
+            <Select
+              value={sort}
+              onValueChange={(v) => {
+                setSort(v ?? "newest");
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -252,7 +266,11 @@ export default function VocabularyPage() {
                         >
                           <Pencil className="size-3.5" />
                         </Link>
-                        <DeleteButton item={item} onDelete={handleDelete} setDeleteId={setDeleteId} />
+                        <DeleteButton
+                          item={item}
+                          onDelete={handleDelete}
+                          setDeleteId={setDeleteId}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -274,32 +292,32 @@ export default function VocabularyPage() {
             <Card key={item.id}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.original}</p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {item.meaning}
-                    </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
+                      {item.type}
+                    </span>
+                    <span className="inline-flex h-5 items-center rounded-full bg-blue-500/10 px-2 text-xs font-medium text-blue-600">
+                      Score: {item.score}
+                    </span>
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <Link
                       href={`/vocabulary/${item.id}`}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-muted"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted"
                     >
-                      <Pencil className="size-3.5" />
+                      <Pencil className="size-4" />
                     </Link>
-                    <DeleteButton item={item} onDelete={handleDelete} setDeleteId={setDeleteId} />
+                    <DeleteButton
+                      size="icon-lg"
+                      item={item}
+                      onDelete={handleDelete}
+                      setDeleteId={setDeleteId}
+                    />
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    {item.language}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {item.type}
-                  </span>
-                  <span className="ml-auto text-xs font-medium">
-                    Score: {item.score}
-                  </span>
+                <div className="mt-3 space-y-1">
+                  <p className="font-bold text-foreground text-xl">{item.original}</p>
+                  <p className="text-muted-foreground text-xl">{item.meaning}</p>
                 </div>
               </CardContent>
             </Card>
@@ -333,5 +351,5 @@ export default function VocabularyPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

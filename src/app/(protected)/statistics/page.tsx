@@ -92,78 +92,6 @@ export default function StatisticsPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Statistics</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BookOpen className="size-4" />
-              Total Studied
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.totalStudied}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="size-4 text-green-600" />
-              Correct
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-green-600">
-              {stats.correctAnswers}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <XCircle className="size-4 text-destructive" />
-              Wrong
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-destructive">
-              {stats.wrongAnswers}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Target className="size-4" />
-              Accuracy
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.accuracy}%</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="size-4" />
-              Average Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.averageScore} / 10</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Flame className="size-4 text-orange-500" />
-              Streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{streak} day{streak !== 1 ? "s" : ""}</p>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card>
         <CardHeader>
@@ -183,9 +111,9 @@ export default function StatisticsPage() {
                     className={
                       `size-9 rounded-full flex items-center justify-center text-sm font-medium ` +
                       (filled
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-orange-500 text-white"
                         : "bg-muted text-muted-foreground") +
-                      (isToday ? " ring-2 ring-primary" : "")
+                      (isToday ? " ring-2 ring-orange-500" : "")
                     }
                   >
                     {filled ? <CheckCircle2 className="size-5" /> : labels[i]}
@@ -197,6 +125,79 @@ export default function StatisticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <BookOpen className="size-8" />
+              Total Studied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{stats.totalStudied}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="size-8 text-green-600" />
+              Correct
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-green-600">
+              {stats.correctAnswers}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <XCircle className="size-8 text-destructive" />
+              Wrong
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-destructive">
+              {stats.wrongAnswers}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Target className="size-8" />
+              Accuracy
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{stats.accuracy}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="size-8" />
+              Average Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{stats.averageScore} / 10</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Flame className="size-8 text-orange-500" />
+              Streak
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{streak} day{streak !== 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>

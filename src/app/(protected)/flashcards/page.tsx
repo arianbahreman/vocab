@@ -1,83 +1,84 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-import { RefreshCw, CheckCircle2, XCircle, Sparkles, ArrowRight } from "lucide-react"
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 
 interface FlashCard {
-  id: string
-  original: string
-  meaning: string
+  id: string;
+  original: string;
+  meaning: string;
 }
 
 export default function FlashcardsPage() {
-  const [card, setCard] = useState<FlashCard | null>(null)
-  const [revealed, setRevealed] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
-  const [nextDue, setNextDue] = useState<string | null>(null)
-  const [reviewedCount, setReviewedCount] = useState(0)
+  const [card, setCard] = useState<FlashCard | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const [nextDue, setNextDue] = useState<string | null>(null);
+  const [reviewedCount, setReviewedCount] = useState(0);
 
   const fetchCard = useCallback(async () => {
-    setLoading(true)
-    setRevealed(false)
-    setSubmitting(false)
-    setError(null)
-    setDone(false)
-    setNextDue(null)
+    setLoading(true);
+    setRevealed(false);
+    setSubmitting(false);
+    setError(null);
+    setDone(false);
+    setNextDue(null);
 
-    const res = await fetch("/api/flashcards/next")
+    const res = await fetch("/api/flashcards/next");
     if (!res.ok) {
-      const data = await res.json()
-      setError(data.error || "Failed to load card")
-      setLoading(false)
-      return
+      const data = await res.json();
+      setError(data.error || "Failed to load card");
+      setLoading(false);
+      return;
     }
 
-    const data = await res.json()
+    const data = await res.json();
 
     if (data.done) {
-      setDone(true)
-      setNextDue(data.nextDue)
-      setLoading(false)
-      return
+      setDone(true);
+      setNextDue(data.nextDue);
+      setLoading(false);
+      return;
     }
 
-    setCard(data)
-    setLoading(false)
-  }, [])
+    setCard(data);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    fetchCard()
-  }, [fetchCard])
+    fetchCard();
+  }, [fetchCard]);
 
   async function handleGrade(quality: number) {
-    if (submitting || !card) return
-    setSubmitting(true)
+    if (submitting || !card) return;
+    setSubmitting(true);
 
     await fetch("/api/flashcards/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vocabularyId: card.id, quality }),
-    })
+    });
 
-    setReviewedCount((c) => c + 1)
-    setSubmitting(false)
-    fetchCard()
+    setReviewedCount((c) => c + 1);
+    setSubmitting(false);
+    fetchCard();
   }
 
   if (loading) {
-    return <p className="text-center text-muted-foreground">Loading card...</p>
+    return <p className="text-center text-muted-foreground">Loading card...</p>;
   }
 
   if (error) {
@@ -89,7 +90,7 @@ export default function FlashcardsPage() {
           Try Again
         </Button>
       </div>
-    )
+    );
   }
 
   if (done) {
@@ -97,7 +98,6 @@ export default function FlashcardsPage() {
       <div className="flex flex-col items-center justify-center gap-6 py-20">
         <div className="relative">
           <Sparkles className="size-16 text-yellow-500" />
-          <div className="absolute -inset-2 animate-ping rounded-full bg-yellow-400/20" />
         </div>
         <h2 className="text-3xl font-bold">You're all caught up!</h2>
         <p className="text-lg text-muted-foreground">
@@ -121,10 +121,10 @@ export default function FlashcardsPage() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
-  if (!card) return null
+  if (!card) return null;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -137,9 +137,7 @@ export default function FlashcardsPage() {
 
       <Card className="text-center">
         <CardHeader>
-          <CardTitle className="text-4xl font-bold">
-            {card.original}
-          </CardTitle>
+          <CardTitle className="text-4xl font-bold">{card.original}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {!revealed ? (
@@ -200,15 +198,15 @@ export default function FlashcardsPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function formatRelative(iso: string): string {
-  const diff = new Date(iso).getTime() - Date.now()
-  if (diff <= 0) return "now"
-  const hours = Math.round(diff / 3_600_000)
-  if (hours < 1) return `${Math.round(diff / 60_000)}m`
-  if (hours < 24) return `${hours}h`
-  const days = Math.round(hours / 24)
-  return `${days}d`
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return "now";
+  const hours = Math.round(diff / 3_600_000);
+  if (hours < 1) return `${Math.round(diff / 60_000)}m`;
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  return `${days}d`;
 }
