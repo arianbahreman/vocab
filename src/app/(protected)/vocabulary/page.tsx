@@ -122,34 +122,36 @@ function generateCsv(items: VocabularyItem[]): string {
 
 function parseCsv(
   text: string,
-): { original: string; meaning: string; note: string }[] {
+): { type: string; original: string; meaning: string; note: string }[] {
   const lines = text.trim().split("\n");
   if (lines.length < 2) return [];
 
   const header = lines[0].toLowerCase();
   const cols = header.split(",").map((c) => c.trim());
+  const typeIdx = cols.indexOf("type");
   const origIdx = cols.indexOf("original");
   const meaningIdx = cols.indexOf("meaning");
   const noteIdx = cols.indexOf("note");
 
-  if (origIdx === -1 || meaningIdx === -1) {
-    throw new Error('CSV must have "original" and "meaning" columns');
+  if (typeIdx === -1 || origIdx === -1 || meaningIdx === -1) {
+    throw new Error('CSV must have "type", "original", and "meaning" columns');
   }
 
-  const results: { original: string; meaning: string; note: string }[] = [];
+  const results: { type: string; original: string; meaning: string; note: string }[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
     const values = line.split(",").map((c) => c.trim());
+    const type = values[typeIdx] ?? "";
     const original = values[origIdx] ?? "";
     const meaning = values[meaningIdx] ?? "";
     const note = noteIdx !== -1 ? (values[noteIdx] ?? "") : "";
 
-    if (!original || !meaning) continue;
+    if (!type || !original || !meaning) continue;
 
-    results.push({ original, meaning, note });
+    results.push({ type, original, meaning, note });
   }
 
   return results;
@@ -263,13 +265,12 @@ function ImportModal({
   onImported: () => void;
 }) {
   const [importLanguage, setImportLanguage] = useState("");
-  const [importType, setImportType] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleImport() {
-    if (!importLanguage || !importType || !importFile) return;
+    if (!importLanguage || !importFile) return;
 
     setImporting(true);
     try {
@@ -285,7 +286,7 @@ function ImportModal({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               language: importLanguage,
-              type: importType,
+              type: row.type,
               original: row.original,
               meaning: row.meaning,
               notes: row.note,
@@ -305,7 +306,6 @@ function ImportModal({
         `Imported ${success} item${success !== 1 ? "s" : ""}${errors ? `, ${errors} error${errors !== 1 ? "s" : ""}` : ""}`,
       );
       setImportLanguage("");
-      setImportType("");
       setImportFile(null);
       if (fileRef.current) fileRef.current.value = "";
       onOpenChange(false);
@@ -317,7 +317,7 @@ function ImportModal({
     }
   }
 
-  const canImport = importLanguage && importType && importFile;
+  const canImport = importLanguage && importFile;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -325,46 +325,25 @@ function ImportModal({
         <DialogHeader>
           <DialogTitle>Import Vocabulary</DialogTitle>
           <DialogDescription>
-            Select language and type, then upload a CSV file
+            Select language and upload a CSV file
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium pb-1">Language</label>
-              <Select
-                value={importLanguage}
-                onValueChange={(v) => setImportLanguage(v ?? "")}
-                required
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="french">French</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium pb-1">Type</label>
-              <Select
-                value={importType}
-                onValueChange={(v) => setImportType(v ?? "")}
-                required
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {VOCAB_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium pb-1">Language</label>
+            <Select
+              value={importLanguage}
+              onValueChange={(v) => setImportLanguage(v ?? "")}
+              required
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="french">French</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium pb-1">CSV File</label>
@@ -375,8 +354,15 @@ function ImportModal({
               onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
             />
             <p className="text-xs text-muted-foreground">
-              CSV must have columns: original, meaning, note (optional)
+              CSV must have columns: type, original, meaning, note (optional)
             </p>
+            <div className="rounded-lg border bg-muted/50 p-2 font-mono text-xs leading-relaxed">
+              <p className="font-medium text-foreground">Example:</p>
+              <p>type,original,meaning,note</p>
+              <p>word,bonjour,hello,greeting</p>
+              <p>phrase,merci beaucoup,thank you very much,</p>
+              <p>noun,bienvenue,welcome,</p>
+            </div>
           </div>
         </div>
         <DialogFooter className="flex-row">
