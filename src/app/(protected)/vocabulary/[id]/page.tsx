@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card"
 import { toast } from "sonner"
 import { Save, X } from "lucide-react"
+import { VOCAB_TYPES } from "@/lib/vocab"
 
 export default function EditVocabularyPage() {
   const { id } = useParams<{ id: string }>()
@@ -99,9 +100,9 @@ export default function EditVocabularyPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="word">Word</SelectItem>
-                  <SelectItem value="phrase">Phrase</SelectItem>
-                  <SelectItem value="verb">Verb</SelectItem>
+                  {VOCAB_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

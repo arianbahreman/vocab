@@ -1,0 +1,9 @@
+ALTER TABLE vocabulary
+  ADD COLUMN IF NOT EXISTS ease_factor REAL        NOT NULL DEFAULT 2.5,
+  ADD COLUMN IF NOT EXISTS interval    INTEGER     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS repetitions INTEGER     NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS next_review TIMESTAMPTZ NOT NULL DEFAULT now();
+
+ALTER TABLE review_history ADD COLUMN IF NOT EXISTS quality INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_vocabulary_next_review ON vocabulary (user_id, next_review);

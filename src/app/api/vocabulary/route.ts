@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { currentStreak } from "@/lib/vocab"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -12,15 +13,26 @@ export async function GET(request: Request) {
   if (isDashboard) {
     const { data: all } = await supabase
       .from("vocabulary")
-      .select("language, score")
+      .select("language, score, next_review")
       .eq("user_id", user.id)
 
     const total = all?.length ?? 0
     const english = all?.filter((v) => v.language === "english").length ?? 0
     const french = all?.filter((v) => v.language === "french").length ?? 0
     const lowScore = all?.filter((v) => v.score < 5).length ?? 0
+    const now = new Date()
+    const due = all?.filter((v) => new Date(v.next_review) <= now).length ?? 0
 
-    return NextResponse.json({ total, english, french, lowScore })
+    const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
+    const { data: reviews } = await supabase
+      .from("review_history")
+      .select("reviewed_at, vocabulary:vocabulary_id!inner(user_id)")
+      .eq("vocabulary.user_id", user.id)
+      .gte("reviewed_at", since)
+
+    const streak = currentStreak((reviews ?? []).map((r) => r.reviewed_at))
+
+    return NextResponse.json({ total, english, french, lowScore, due, streak })
   }
 
   const search = searchParams.get("search") || ""

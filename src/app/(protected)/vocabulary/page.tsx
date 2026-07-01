@@ -44,6 +44,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react"
+import { VOCAB_TYPES } from "@/lib/vocab"
 
 interface VocabularyItem {
   id: string
@@ -52,6 +53,45 @@ interface VocabularyItem {
   original: string
   meaning: string
   score: number
+}
+
+function DeleteButton({
+  item,
+  onDelete,
+  setDeleteId,
+}: {
+  item: VocabularyItem
+  onDelete: () => void
+  setDeleteId: (id: string | null) => void
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger
+        render={<Button variant="ghost" size="icon-sm" className="text-destructive" />}
+        onClick={() => setDeleteId(item.id)}
+      >
+        <Trash2 className="size-3.5" />
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete vocabulary?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. Are you sure you want to delete
+            &ldquo;{item.original}&rdquo;?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDeleteId(null)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onDelete}>
+            <Trash2 className="size-4" />
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export default function VocabularyPage() {
@@ -151,12 +191,12 @@ export default function VocabularyPage() {
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="word">Word</SelectItem>
-                <SelectItem value="phrase">Phrase</SelectItem>
-                <SelectItem value="verb">Verb</SelectItem>
-              </SelectContent>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {VOCAB_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
             </Select>
             <Select value={sort} onValueChange={(v) => { setSort(v ?? "newest"); setPage(1) }}>
               <SelectTrigger className="w-36">
@@ -173,7 +213,8 @@ export default function VocabularyPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* Desktop table */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           {loading ? (
             <p className="p-4 text-muted-foreground">Loading...</p>
@@ -211,44 +252,7 @@ export default function VocabularyPage() {
                         >
                           <Pencil className="size-3.5" />
                         </Link>
-                        <Dialog>
-                          <DialogTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className="text-destructive"
-                              />
-                            }
-                            onClick={() => setDeleteId(item.id)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete vocabulary?</DialogTitle>
-                              <DialogDescription>
-                                This action cannot be undone. Are you sure you
-                                want to delete &ldquo;{item.original}&rdquo;?
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setDeleteId(null)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={handleDelete}
-                              >
-                                <Trash2 className="size-4" />
-                                Delete
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                        <DeleteButton item={item} onDelete={handleDelete} setDeleteId={setDeleteId} />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -258,6 +262,50 @@ export default function VocabularyPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile cards */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <p className="text-muted-foreground">Loading...</p>
+        ) : items.length === 0 ? (
+          <p className="text-muted-foreground">No vocabulary found.</p>
+        ) : (
+          items.map((item) => (
+            <Card key={item.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{item.original}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {item.meaning}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Link
+                      href={`/vocabulary/${item.id}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-muted"
+                    >
+                      <Pencil className="size-3.5" />
+                    </Link>
+                    <DeleteButton item={item} onDelete={handleDelete} setDeleteId={setDeleteId} />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {item.language}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {item.type}
+                  </span>
+                  <span className="ml-auto text-xs font-medium">
+                    Score: {item.score}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">

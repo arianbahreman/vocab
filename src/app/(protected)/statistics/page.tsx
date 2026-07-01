@@ -14,8 +14,17 @@ import {
   XCircle,
   Target,
   TrendingUp,
+  Flame,
   Play,
 } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+import { dayKey, currentStreak } from "@/lib/vocab"
 
 interface Stats {
   totalStudied: number
@@ -23,6 +32,7 @@ interface Stats {
   wrongAnswers: number
   accuracy: number
   averageScore: number
+  reviewDates: string[]
 }
 
 export default function StatisticsPage() {
@@ -55,6 +65,29 @@ export default function StatisticsPage() {
       </div>
     )
   }
+
+  const streak = currentStreak(stats.reviewDates)
+
+  const activeDays = new Set(stats.reviewDates.map((s) => dayKey(new Date(s))))
+
+  const today = new Date()
+  const dayOfWeek = today.getDay()
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + mondayOffset)
+
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d
+  })
+
+  const labels = ["M", "T", "W", "T", "F", "S", "S"]
+
+  const chartData = buildChartData(stats.reviewDates, 14)
+  const chartConfig = {
+    reviews: { label: "Reviews", color: "var(--primary)" },
+  } satisfies ChartConfig
 
   return (
     <div className="space-y-8">
@@ -119,7 +152,93 @@ export default function StatisticsPage() {
             <p className="text-3xl font-bold">{stats.averageScore} / 10</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Flame className="size-4 text-orange-500" />
+              Streak
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{streak} day{streak !== 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm text-muted-foreground">
+            This Week
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 justify-center">
+            {weekDays.map((d, i) => {
+              const key = dayKey(d)
+              const filled = activeDays.has(key)
+              const isToday = dayKey(d) === dayKey(today)
+              return (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <div
+                    className={
+                      `size-9 rounded-full flex items-center justify-center text-sm font-medium ` +
+                      (filled
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground") +
+                      (isToday ? " ring-2 ring-primary" : "")
+                    }
+                  >
+                    {filled ? <CheckCircle2 className="size-5" /> : labels[i]}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{labels[i]}</span>
+                </div>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm text-muted-foreground">
+            Activity (Last 14 Days)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-40 w-full">
+            <BarChart data={chartData} margin={{ left: -20 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="day"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+              />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="reviews"
+                fill="var(--color-reviews)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     </div>
   )
+}
+
+function buildChartData(reviewDates: string[], days: number) {
+  const counts = new Map<string, number>()
+  const now = new Date()
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    counts.set(dayKey(d), 0)
+  }
+  for (const iso of reviewDates) {
+    const key = dayKey(new Date(iso))
+    if (counts.has(key)) counts.set(key, counts.get(key)! + 1)
+  }
+  return Array.from(counts.entries()).map(([day, reviews]) => ({ day, reviews }))
 }

@@ -11,6 +11,16 @@ export async function GET() {
     .select("score, correct_count, wrong_count")
     .eq("user_id", user.id)
 
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const { data: reviews } = await supabase
+    .from("review_history")
+    .select("reviewed_at, vocabulary:vocabulary_id!inner(user_id)")
+    .eq("vocabulary.user_id", user.id)
+    .gte("reviewed_at", since)
+    .order("reviewed_at", { ascending: true })
+
+  const reviewDates = (reviews ?? []).map((r) => r.reviewed_at)
+
   if (!vocab || vocab.length === 0) {
     return NextResponse.json({
       totalStudied: 0,
@@ -18,6 +28,7 @@ export async function GET() {
       wrongAnswers: 0,
       accuracy: 0,
       averageScore: 0,
+      reviewDates: [],
     })
   }
 
@@ -39,5 +50,6 @@ export async function GET() {
     wrongAnswers,
     accuracy,
     averageScore,
+    reviewDates,
   })
 }

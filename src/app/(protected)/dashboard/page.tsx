@@ -8,13 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { BookOpen, Languages, GraduationCap, AlertCircle, Plus, Play } from "lucide-react"
+import { BookOpen, Languages, GraduationCap, AlertCircle, Clock, Flame, Plus, Play } from "lucide-react"
 
 interface DashboardData {
   total: number
   english: number
   french: number
   lowScore: number
+  due: number
+  streak: number
 }
 
 export default function DashboardPage() {
@@ -33,11 +35,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Dashboard</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BookOpen className="size-4" />
+              <BookOpen className="size-8" />
               Total Words
             </CardTitle>
           </CardHeader>
@@ -48,7 +50,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Languages className="size-4" />
+              <Languages className="size-8" />
               English
             </CardTitle>
           </CardHeader>
@@ -59,7 +61,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Languages className="size-4" />
+              <Languages className="size-8" />
               French
             </CardTitle>
           </CardHeader>
@@ -70,12 +72,34 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertCircle className="size-4" />
+              <AlertCircle className="size-8" />
               Low Score (&lt;5)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{data?.lowScore ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="size-8" />
+              Due for Review
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{data?.due ?? 0}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Flame className="size-8 text-orange-500" />
+              Day Streak
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{data?.streak ?? 0}</p>
           </CardContent>
         </Card>
       </div>

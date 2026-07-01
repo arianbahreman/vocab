@@ -11,6 +11,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Vocab",
   description: "English & French vocabulary learning app",
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({

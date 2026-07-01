@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { applyReview } from "@/lib/srs"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { vocabularyId, correct } = await request.json()
+  const { vocabularyId, quality } = await request.json()
 
   const { data: item } = await supabase
     .from("vocabulary")
@@ -19,16 +20,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Vocabulary not found" }, { status: 404 })
   }
 
-  const newScore = correct
+  const result = applyReview(
+    {
+      easeFactor: item.ease_factor,
+      interval: item.interval,
+      repetitions: item.repetitions,
+    },
+    quality,
+  )
+
+  const newScore = quality >= 3
     ? Math.min(item.score + 1, 10)
     : Math.max(item.score - 1, 0)
 
-  const newCorrectCount = item.correct_count + (correct ? 1 : 0)
-  const newWrongCount = item.wrong_count + (correct ? 0 : 1)
+  const newCorrectCount = item.correct_count + (quality >= 3 ? 1 : 0)
+  const newWrongCount = item.wrong_count + (quality < 3 ? 1 : 0)
 
   await supabase
     .from("vocabulary")
     .update({
+      ease_factor: result.easeFactor,
+      interval: result.interval,
+      repetitions: result.repetitions,
+      next_review: result.nextReview.toISOString(),
       score: newScore,
       correct_count: newCorrectCount,
       wrong_count: newWrongCount,
@@ -40,13 +54,14 @@ export async function POST(request: Request) {
 
   await supabase.from("review_history").insert({
     vocabulary_id: vocabularyId,
-    correct,
+    correct: quality >= 3,
+    quality,
     reviewed_at: new Date().toISOString(),
   })
 
   return NextResponse.json({
-    correct,
-    newScore,
+    nextReview: result.nextReview.toISOString(),
+    score: newScore,
     correct_count: newCorrectCount,
     wrong_count: newWrongCount,
   })
