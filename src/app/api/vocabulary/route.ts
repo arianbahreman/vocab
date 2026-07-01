@@ -94,6 +94,32 @@ export async function POST(request: Request) {
 
   const body = await request.json()
 
+  if (body.items) {
+    if (!body.language || !Array.isArray(body.items) || body.items.length === 0) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    const rows = body.items.map((item: { type: string; original: string; meaning: string; note?: string }) => ({
+      user_id: user.id,
+      language: body.language,
+      type: item.type,
+      original: item.original,
+      meaning: item.meaning,
+      notes: item.note || "",
+    }))
+
+    const { data, error } = await supabase
+      .from("vocabulary")
+      .insert(rows)
+      .select()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ imported: data?.length ?? 0 }, { status: 201 })
+  }
+
   if (!body.language || !body.type || !body.original || !body.meaning) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }

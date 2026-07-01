@@ -276,35 +276,19 @@ function ImportModal({
     try {
       const text = await importFile.text();
       const rows = parseCsv(text);
-      let success = 0;
-      let errors = 0;
 
-      for (const row of rows) {
-        try {
-          const res = await fetch("/api/vocabulary", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              language: importLanguage,
-              type: row.type,
-              original: row.original,
-              meaning: row.meaning,
-              notes: row.note,
-            }),
-          });
-          if (res.ok) {
-            success++;
-          } else {
-            errors++;
-          }
-        } catch {
-          errors++;
-        }
+      const res = await fetch("/api/vocabulary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: importLanguage, items: rows }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Import failed");
       }
 
-      toast.success(
-        `Imported ${success} item${success !== 1 ? "s" : ""}${errors ? `, ${errors} error${errors !== 1 ? "s" : ""}` : ""}`,
-      );
+      const data = await res.json();
+      toast.success(`Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}`);
       setImportLanguage("");
       setImportFile(null);
       if (fileRef.current) fileRef.current.value = "";
