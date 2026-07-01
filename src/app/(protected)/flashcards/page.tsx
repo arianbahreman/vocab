@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   RefreshCw,
@@ -20,6 +28,18 @@ interface FlashCard {
 }
 
 export default function FlashcardsPage() {
+  return (
+    <Suspense fallback={<p className="text-center text-muted-foreground">Loading card...</p>}>
+      <FlashcardsContent />
+    </Suspense>
+  );
+}
+
+function FlashcardsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const language = searchParams.get("language") ?? "all";
+
   const [card, setCard] = useState<FlashCard | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +57,10 @@ export default function FlashcardsPage() {
     setDone(false);
     setNextDue(null);
 
-    const res = await fetch("/api/flashcards/next");
+    const params = new URLSearchParams();
+    if (language !== "all") params.set("language", language);
+
+    const res = await fetch(`/api/flashcards/next?${params.toString()}`);
     if (!res.ok) {
       const data = await res.json();
       setError(data.error || "Failed to load card");
@@ -56,11 +79,21 @@ export default function FlashcardsPage() {
 
     setCard(data);
     setLoading(false);
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     fetchCard();
   }, [fetchCard]);
+
+  function handleLanguageChange(value: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!value || value === "all") {
+      params.delete("language");
+    } else {
+      params.set("language", value);
+    }
+    router.replace(`/flashcards?${params.toString()}`, { scroll: false });
+  }
 
   async function handleGrade(quality: number) {
     if (submitting || !card) return;
@@ -128,11 +161,23 @@ export default function FlashcardsPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Flashcards</h1>
-        <span className="text-sm text-muted-foreground">
-          Reviewed: {reviewedCount}
-        </span>
+        <div className="flex items-center gap-4">
+          <Select value={language} onValueChange={handleLanguageChange}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="english">English</SelectItem>
+              <SelectItem value="french">French</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Reviewed: {reviewedCount}
+          </span>
+        </div>
       </div>
 
       <Card className="text-center">
