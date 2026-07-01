@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -90,28 +90,31 @@ export default function NewVocabularyPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="original">Original</Label>
-              <Input
+              <Textarea
                 id="original"
                 value={original}
                 onChange={(e) => setOriginal(e.target.value)}
+                className="min-h-[80px]"
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="meaning">Meaning</Label>
-              <Input
+              <Textarea
                 id="meaning"
                 value={meaning}
                 onChange={(e) => setMeaning(e.target.value)}
+                className="min-h-[80px]"
                 required
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (optional)</Label>
-              <Input
+              <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[80px]"
               />
             </div>
             <div className="flex gap-4">

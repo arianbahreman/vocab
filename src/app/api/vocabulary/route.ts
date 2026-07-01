@@ -39,6 +39,7 @@ export async function GET(request: Request) {
   const language = searchParams.get("language") || ""
   const type = searchParams.get("type") || ""
   const sort = searchParams.get("sort") || "newest"
+  const isExport = searchParams.get("export") === "true"
   const page = parseInt(searchParams.get("page") || "1")
   const limit = 20
   const offset = (page - 1) * limit
@@ -68,9 +69,15 @@ export async function GET(request: Request) {
       query = query.order("created_at", { ascending: false })
   }
 
-  query = query.range(offset, offset + limit - 1)
+  if (!isExport) {
+    query = query.range(offset, offset + limit - 1)
+  }
 
   const { data, count } = await query
+
+  if (isExport) {
+    return NextResponse.json({ items: data ?? [] })
+  }
 
   return NextResponse.json({
     items: data ?? [],
