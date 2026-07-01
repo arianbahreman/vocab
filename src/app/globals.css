@@ -117,6 +117,53 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@layer utilities {
+  .flashcard-perspective {
+    perspective: 1000px;
+  }
+  .flashcard-preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .flashcard-backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .flashcard-rotate-180 {
+    transform: rotateY(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashcard-inner {
+    transition: none !important;
+  }
+  .flashcard-front,
+  .flashcard-back {
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+    position: relative !important;
+  }
+  .flashcard-front {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+  .flashcard-back {
+    opacity: 0;
+    transform: none !important;
+    position: absolute !important;
+    inset: 0;
+    transition: opacity 0.2s ease;
+  }
+  .flashcard-inner[data-revealed="true"] .flashcard-front {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .flashcard-inner[data-revealed="true"] .flashcard-back {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
