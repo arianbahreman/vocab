@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ import {
   ChevronRight,
   Upload,
   Download,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { VOCAB_TYPES } from "@/lib/vocab";
@@ -391,6 +393,246 @@ function ImportModal({
   );
 }
 
+function AddModal({
+  open,
+  onOpenChange,
+  onAdded,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdded: () => void;
+}) {
+  const [language, setLanguage] = useState("");
+  const [type, setType] = useState("");
+  const [original, setOriginal] = useState("");
+  const [meaning, setMeaning] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    const res = await fetch("/api/vocabulary", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, type, original, meaning, notes }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast.error("Failed to save vocabulary");
+      return;
+    }
+    toast.success("Vocabulary added!");
+    setLanguage("");
+    setType("");
+    setOriginal("");
+    setMeaning("");
+    setNotes("");
+    onOpenChange(false);
+    onAdded();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Add Vocabulary</DialogTitle>
+            <DialogDescription>Add a new word or phrase</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-language">Language</Label>
+                <Select value={language} onValueChange={(v) => setLanguage(v ?? "")} required>
+                  <SelectTrigger id="add-language" className="w-full">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English</SelectItem>
+                    <SelectItem value="french">French</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-type">Type</Label>
+                <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
+                  <SelectTrigger id="add-type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOCAB_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-original">Original</Label>
+              <Textarea
+                id="add-original"
+                value={original}
+                onChange={(e) => setOriginal(e.target.value)}
+                className="min-h-[80px]"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-meaning">Meaning</Label>
+              <Textarea
+                id="add-meaning"
+                value={meaning}
+                onChange={(e) => setMeaning(e.target.value)}
+                className="min-h-[80px]"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-notes">Notes (optional)</Label>
+              <Textarea
+                id="add-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-row">
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              <Save className="size-4" />
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditModal({
+  item,
+  open,
+  onOpenChange,
+  onUpdated,
+}: {
+  item: VocabularyItem | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: () => void;
+}) {
+  const [language, setLanguage] = useState(item?.language ?? "");
+  const [type, setType] = useState(item?.type ?? "");
+  const [original, setOriginal] = useState(item?.original ?? "");
+  const [meaning, setMeaning] = useState(item?.meaning ?? "");
+  const [notes, setNotes] = useState(item?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!item) return;
+    setSaving(true);
+    const res = await fetch(`/api/vocabulary/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language, type, original, meaning, notes }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast.error("Failed to update vocabulary");
+      return;
+    }
+    toast.success("Vocabulary updated!");
+    onOpenChange(false);
+    onUpdated();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} key={item?.id ?? "edit"}>
+      <DialogContent>
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Vocabulary</DialogTitle>
+            <DialogDescription>
+              Edit &ldquo;{item?.original}&rdquo;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-language">Language</Label>
+                <Select value={language} onValueChange={(v) => setLanguage(v ?? "")} required>
+                  <SelectTrigger id="edit-language" className="w-full">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="english">English</SelectItem>
+                    <SelectItem value="french">French</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-type">Type</Label>
+                <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
+                  <SelectTrigger id="edit-type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOCAB_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-original">Original</Label>
+              <Textarea
+                id="edit-original"
+                value={original}
+                onChange={(e) => setOriginal(e.target.value)}
+                className="min-h-[80px]"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-meaning">Meaning</Label>
+              <Textarea
+                id="edit-meaning"
+                value={meaning}
+                onChange={(e) => setMeaning(e.target.value)}
+                className="min-h-[80px]"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-notes">Notes (optional)</Label>
+              <Textarea
+                id="edit-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-row">
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              <Save className="size-4" />
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function VocabularyPage() {
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [, setTotal] = useState(0);
@@ -405,6 +647,8 @@ export default function VocabularyPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<VocabularyItem | null>(null);
 
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
@@ -461,7 +705,7 @@ export default function VocabularyPage() {
           <Button
             variant="default"
             size="icon"
-            render={<Link href="/vocabulary/new" />}
+            onClick={() => setAddOpen(true)}
           >
             <Plus className="size-4" />
           </Button>
@@ -473,6 +717,23 @@ export default function VocabularyPage() {
         open={importOpen}
         onOpenChange={setImportOpen}
         onImported={() => {
+          setLoading(true);
+          fetchData().finally(() => setLoading(false));
+        }}
+      />
+      <AddModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdded={() => {
+          setLoading(true);
+          fetchData().finally(() => setLoading(false));
+        }}
+      />
+      <EditModal
+        item={editItem}
+        open={editItem !== null}
+        onOpenChange={(open) => { if (!open) setEditItem(null); }}
+        onUpdated={() => {
           setLoading(true);
           fetchData().finally(() => setLoading(false));
         }}
@@ -587,12 +848,13 @@ export default function VocabularyPage() {
                     <TableCell>{item.score}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Link
-                          href={`/vocabulary/${item.id}`}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm hover:bg-muted"
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setEditItem(item)}
                         >
                           <Pencil className="size-3.5" />
-                        </Link>
+                        </Button>
                         <DeleteButton
                           item={item}
                           onDelete={handleDelete}
@@ -628,12 +890,13 @@ export default function VocabularyPage() {
                     </span>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Link
-                      href={`/vocabulary/${item.id}`}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-muted"
+                    <Button
+                      variant="ghost"
+                      size="icon-lg"
+                      onClick={() => setEditItem(item)}
                     >
                       <Pencil className="size-4" />
-                    </Link>
+                    </Button>
                     <DeleteButton
                       size="icon-lg"
                       item={item}
