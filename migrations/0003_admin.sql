@@ -1,0 +1,10 @@
+-- Admin role bootstrap (run in Supabase SQL Editor)
+--
+-- Promote your account to admin (replace with your username):
+--
+-- UPDATE auth.users
+-- SET raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'::jsonb
+-- WHERE email = 'yourusername@vocab.app';
+--
+-- After running, log out and back in so the JWT picks up the new role.
+-- Further role changes can be done from the /admin page in the app.

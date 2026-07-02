@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
+import { isAdmin } from "@/lib/roles"
 
-const protectedPaths = ["/dashboard", "/vocabulary", "/flashcards", "/statistics"]
+const protectedPaths = [
+  "/dashboard",
+  "/vocabulary",
+  "/flashcards",
+  "/statistics",
+  "/admin",
+]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -34,6 +41,10 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     return Response.redirect(url)
+  }
+
+  if (pathname.startsWith("/admin") && !isAdmin(user)) {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   if (user && (pathname === "/login" || pathname === "/register")) {

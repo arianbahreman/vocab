@@ -4,12 +4,14 @@ import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { isAdmin } from "@/lib/roles"
 import { useEffect, useState } from "react"
 import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
   BarChart3,
+  Users,
   LogOut,
   Menu,
   X,
@@ -17,23 +19,33 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
-const navLinks = [
+const baseNavLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vocabulary", label: "Vocabulary", icon: BookOpen },
   { href: "/flashcards", label: "Flashcards", icon: GraduationCap },
   { href: "/statistics", label: "Statistics", icon: BarChart3 },
 ]
 
+const adminNavLink = {
+  href: "/admin",
+  label: "Users",
+  icon: Users,
+}
+
 export default function Navbar() {
   const [username, setUsername] = useState<string | null>(null)
+  const [admin, setAdmin] = useState(false)
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
 
+  const navLinks = admin ? [...baseNavLinks, adminNavLink] : baseNavLinks
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUsername(data.user?.user_metadata?.username ?? null)
+      setAdmin(isAdmin(data.user))
     })
   }, [])
 
