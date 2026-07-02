@@ -406,6 +406,184 @@ function ImportModal({
   );
 }
 
+function VocabularyFormFields({
+  idPrefix,
+  language,
+  setLanguage,
+  type,
+  setType,
+  word,
+  setWord,
+  meaning,
+  setMeaning,
+  exampleSentence,
+  setExampleSentence,
+  category,
+  setCategory,
+  level,
+  setLevel,
+  frequencyRank,
+  setFrequencyRank,
+  notes,
+  setNotes,
+}: {
+  idPrefix: string;
+  language: string;
+  setLanguage: (v: string) => void;
+  type: string;
+  setType: (v: string) => void;
+  word: string;
+  setWord: (v: string) => void;
+  meaning: string;
+  setMeaning: (v: string) => void;
+  exampleSentence: string;
+  setExampleSentence: (v: string) => void;
+  category: string;
+  setCategory: (v: string) => void;
+  level: string;
+  setLevel: (v: string) => void;
+  frequencyRank: string;
+  setFrequencyRank: (v: string) => void;
+  notes: string;
+  setNotes: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-3 py-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-language`}>Language</Label>
+          <Select
+            value={language}
+            onValueChange={(v) => setLanguage(v ?? "")}
+            required
+          >
+            <SelectTrigger id={`${idPrefix}-language`} className="w-full">
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="english">English</SelectItem>
+              <SelectItem value="french">French</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-type`}>Type</Label>
+          <Select
+            value={type}
+            onValueChange={(v) => setType(v ?? "")}
+            required
+          >
+            <SelectTrigger id={`${idPrefix}-type`} className="w-full">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              {VOCAB_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor={`${idPrefix}-category`}>Category</Label>
+        <Select
+          value={category}
+          onValueChange={(v) => setCategory(v ?? "other")}
+        >
+          <SelectTrigger id={`${idPrefix}-category`} className="w-full">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {WORD_CATEGORIES.map((c) => (
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-level`}>Level</Label>
+          <Select
+            value={level}
+            onValueChange={(v) => setLevel(v ?? "intermediate")}
+          >
+            <SelectTrigger id={`${idPrefix}-level`} className="w-full">
+              <SelectValue placeholder="Select level" />
+            </SelectTrigger>
+            <SelectContent>
+              {WORD_LEVELS.map((l) => (
+                <SelectItem key={l.value} value={l.value}>
+                  {l.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-frequency`}>Frequency Rank</Label>
+          <Input
+            id={`${idPrefix}-frequency`}
+            type="number"
+            min={1}
+            value={frequencyRank}
+            onChange={(e) => setFrequencyRank(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-word`}>Word</Label>
+          <Textarea
+            id={`${idPrefix}-word`}
+            value={word}
+            onChange={(e) => setWord(e.target.value)}
+            className="min-h-[56px] resize-none"
+            rows={2}
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-meaning`}>Meaning</Label>
+          <Textarea
+            id={`${idPrefix}-meaning`}
+            value={meaning}
+            onChange={(e) => setMeaning(e.target.value)}
+            className="min-h-[56px] resize-none"
+            rows={2}
+            required
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-example`}>Example</Label>
+          <Textarea
+            id={`${idPrefix}-example`}
+            value={exampleSentence}
+            onChange={(e) => setExampleSentence(e.target.value)}
+            className="min-h-[56px] resize-none"
+            rows={2}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-notes`}>Note</Label>
+          <Textarea
+            id={`${idPrefix}-notes`}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="min-h-[56px] resize-none"
+            rows={2}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddModal({
   open,
   onOpenChange,
@@ -465,137 +643,32 @@ function AddModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="gap-3 sm:max-w-2xl">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
+          <DialogHeader className="gap-0">
             <DialogTitle>Add Vocabulary</DialogTitle>
-            <DialogDescription>Add a new word or phrase</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="add-language">Language</Label>
-                <Select
-                  value={language}
-                  onValueChange={(v) => setLanguage(v ?? "")}
-                  required
-                >
-                  <SelectTrigger id="add-language" className="w-full">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="english">English</SelectItem>
-                    <SelectItem value="french">French</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-type">Type</Label>
-                <Select
-                  value={type}
-                  onValueChange={(v) => setType(v ?? "")}
-                  required
-                >
-                  <SelectTrigger id="add-type" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VOCAB_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-word">Word</Label>
-              <Textarea
-                id="add-word"
-                value={word}
-                onChange={(e) => setWord(e.target.value)}
-                className="min-h-[80px]"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-meaning">Meaning</Label>
-              <Textarea
-                id="add-meaning"
-                value={meaning}
-                onChange={(e) => setMeaning(e.target.value)}
-                className="min-h-[80px]"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-example">Example sentence (optional)</Label>
-              <Textarea
-                id="add-example"
-                value={exampleSentence}
-                onChange={(e) => setExampleSentence(e.target.value)}
-                className="min-h-[60px]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="add-category">Category</Label>
-                <Select
-                  value={category}
-                  onValueChange={(v) => setCategory(v ?? "other")}
-                >
-                  <SelectTrigger id="add-category" className="w-full">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WORD_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-level">Level</Label>
-                <Select
-                  value={level}
-                  onValueChange={(v) => setLevel(v ?? "intermediate")}
-                >
-                  <SelectTrigger id="add-level" className="w-full">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WORD_LEVELS.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-frequency">Frequency rank (optional)</Label>
-              <Input
-                id="add-frequency"
-                type="number"
-                min={1}
-                value={frequencyRank}
-                onChange={(e) => setFrequencyRank(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-notes">Notes (optional)</Label>
-              <Textarea
-                id="add-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[80px]"
-              />
-            </div>
-          </div>
+          <VocabularyFormFields
+            idPrefix="add"
+            language={language}
+            setLanguage={setLanguage}
+            type={type}
+            setType={setType}
+            word={word}
+            setWord={setWord}
+            meaning={meaning}
+            setMeaning={setMeaning}
+            exampleSentence={exampleSentence}
+            setExampleSentence={setExampleSentence}
+            category={category}
+            setCategory={setCategory}
+            level={level}
+            setLevel={setLevel}
+            frequencyRank={frequencyRank}
+            setFrequencyRank={setFrequencyRank}
+            notes={notes}
+            setNotes={setNotes}
+          />
           <DialogFooter className="flex-row">
             <Button
               variant="outline"
@@ -671,140 +744,33 @@ function EditModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} key={item?.id ?? "edit"}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="gap-3 sm:max-w-2xl">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
+          <DialogHeader className="gap-0">
             <DialogTitle>Edit Vocabulary</DialogTitle>
-            <DialogDescription>
-              Edit &ldquo;{item?.word}&rdquo;
-            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-language">Language</Label>
-                <Select
-                  value={language}
-                  onValueChange={(v) => setLanguage(v ?? "")}
-                  required
-                >
-                  <SelectTrigger id="edit-language" className="w-full">
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="english">English</SelectItem>
-                    <SelectItem value="french">French</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-type">Type</Label>
-                <Select
-                  value={type}
-                  onValueChange={(v) => setType(v ?? "")}
-                  required
-                >
-                  <SelectTrigger id="edit-type" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {VOCAB_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-word">Word</Label>
-              <Textarea
-                id="edit-word"
-                value={word}
-                onChange={(e) => setWord(e.target.value)}
-                className="min-h-[80px]"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-meaning">Meaning</Label>
-              <Textarea
-                id="edit-meaning"
-                value={meaning}
-                onChange={(e) => setMeaning(e.target.value)}
-                className="min-h-[80px]"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-example">Example sentence (optional)</Label>
-              <Textarea
-                id="edit-example"
-                value={exampleSentence}
-                onChange={(e) => setExampleSentence(e.target.value)}
-                className="min-h-[60px]"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-category">Category</Label>
-                <Select
-                  value={category}
-                  onValueChange={(v) => setCategory(v ?? "other")}
-                >
-                  <SelectTrigger id="edit-category" className="w-full">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WORD_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-level">Level</Label>
-                <Select
-                  value={level}
-                  onValueChange={(v) => setLevel(v ?? "intermediate")}
-                >
-                  <SelectTrigger id="edit-level" className="w-full">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WORD_LEVELS.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-frequency">Frequency rank (optional)</Label>
-              <Input
-                id="edit-frequency"
-                type="number"
-                min={1}
-                value={frequencyRank}
-                onChange={(e) => setFrequencyRank(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes (optional)</Label>
-              <Textarea
-                id="edit-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[80px]"
-              />
-            </div>
-          </div>
+          <VocabularyFormFields
+            idPrefix="edit"
+            language={language}
+            setLanguage={setLanguage}
+            type={type}
+            setType={setType}
+            word={word}
+            setWord={setWord}
+            meaning={meaning}
+            setMeaning={setMeaning}
+            exampleSentence={exampleSentence}
+            setExampleSentence={setExampleSentence}
+            category={category}
+            setCategory={setCategory}
+            level={level}
+            setLevel={setLevel}
+            frequencyRank={frequencyRank}
+            setFrequencyRank={setFrequencyRank}
+            notes={notes}
+            setNotes={setNotes}
+          />
           <DialogFooter className="flex-row">
             <Button
               variant="outline"
@@ -1002,6 +968,7 @@ export default function VocabularyPage() {
         onAdded={refreshData}
       />
       <EditModal
+        key={editItem?.id ?? "closed"}
         item={editItem}
         open={editItem !== null}
         onOpenChange={(open) => {

@@ -6,7 +6,6 @@ export interface FlashcardProps {
   word: string;
   meaning: string;
   type?: string | null;
-  notes?: string | null;
   exampleSentence?: string | null;
   score?: number;
   correctCount?: number;
@@ -20,7 +19,6 @@ export function Flashcard({
   word,
   meaning,
   type,
-  notes,
   exampleSentence,
   score,
   correctCount,
@@ -70,9 +68,6 @@ export function Flashcard({
               <p className="max-w-md text-sm italic text-muted-foreground">
                 &ldquo;{exampleSentence}&rdquo;
               </p>
-            )}
-            {notes && (
-              <p className="max-w-md text-sm text-muted-foreground">{notes}</p>
             )}
           </div>
 

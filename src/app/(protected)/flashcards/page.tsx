@@ -33,7 +33,6 @@ interface FlashCard {
   meaning: string;
   language?: string;
   type?: string | null;
-  notes?: string | null;
   exampleSentence?: string | null;
   score?: number;
   correctCount?: number;
@@ -486,7 +485,6 @@ function FlashcardsContent() {
         word={card.word}
         meaning={card.meaning}
         type={card.type}
-        notes={card.notes}
         exampleSentence={card.exampleSentence}
         score={card.score}
         correctCount={card.correctCount}
