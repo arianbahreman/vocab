@@ -44,16 +44,24 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import { VOCAB_TYPES } from "@/lib/vocab";
+import {
+  VOCAB_TYPES,
+  WORD_CATEGORIES,
+  WORD_LEVELS,
+  categoryLabel,
+  levelLabel,
+  type VocabularyItem,
+} from "@/lib/vocab";
 
-interface VocabularyItem {
-  id: string;
-  language: string;
+interface CsvRow {
   type: string;
-  original: string;
+  word: string;
   meaning: string;
-  notes?: string;
-  score: number;
+  note: string;
+  example_sentence: string;
+  category: string;
+  level: string;
+  frequency_rank: number | null;
 }
 
 function DeleteButton({
@@ -70,19 +78,17 @@ function DeleteButton({
   return (
     <Dialog>
       <DialogTrigger
-        render={
-          <Button variant="ghost" size={size} className="text-destructive" />
-        }
+        render={<Button variant="destructive" size={size} />}
         onClick={() => setDeleteId(item.id)}
       >
-        <Trash2 className="size-3.5" />
+        <Trash2 className="size-4" />
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete vocabulary?</DialogTitle>
           <DialogDescription>
             This action cannot be undone. Are you sure you want to delete
-            &ldquo;{item.original}&rdquo;?
+            &ldquo;{item.word}&rdquo;?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -107,37 +113,48 @@ function escapeCsv(value: string): string {
 }
 
 function generateCsv(items: VocabularyItem[]): string {
-  const header = "language,type,original,meaning,notes";
+  const header =
+    "language,type,word,meaning,example_sentence,category,level,frequency_rank,notes";
   const rows = items.map((item) =>
     [
       escapeCsv(item.language),
       escapeCsv(item.type),
-      escapeCsv(item.original),
+      escapeCsv(item.word),
       escapeCsv(item.meaning),
+      escapeCsv(item.example_sentence ?? ""),
+      escapeCsv(item.category),
+      escapeCsv(item.level),
+      item.frequency_rank != null ? String(item.frequency_rank) : "",
       escapeCsv(item.notes ?? ""),
     ].join(","),
   );
   return [header, ...rows].join("\n");
 }
 
-function parseCsv(
-  text: string,
-): { type: string; original: string; meaning: string; note: string }[] {
+function parseCsv(text: string): CsvRow[] {
   const lines = text.trim().split("\n");
   if (lines.length < 2) return [];
 
   const header = lines[0].toLowerCase();
   const cols = header.split(",").map((c) => c.trim());
   const typeIdx = cols.indexOf("type");
-  const origIdx = cols.indexOf("original");
+  const wordIdx =
+    cols.indexOf("word") !== -1
+      ? cols.indexOf("word")
+      : cols.indexOf("original");
   const meaningIdx = cols.indexOf("meaning");
   const noteIdx = cols.indexOf("note");
+  const notesIdx = cols.indexOf("notes");
+  const exampleIdx = cols.indexOf("example_sentence");
+  const categoryIdx = cols.indexOf("category");
+  const levelIdx = cols.indexOf("level");
+  const freqIdx = cols.indexOf("frequency_rank");
 
-  if (typeIdx === -1 || origIdx === -1 || meaningIdx === -1) {
-    throw new Error('CSV must have "type", "original", and "meaning" columns');
+  if (typeIdx === -1 || wordIdx === -1 || meaningIdx === -1) {
+    throw new Error('CSV must have "type", "word", and "meaning" columns');
   }
 
-  const results: { type: string; original: string; meaning: string; note: string }[] = [];
+  const results: CsvRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -145,13 +162,33 @@ function parseCsv(
 
     const values = line.split(",").map((c) => c.trim());
     const type = values[typeIdx] ?? "";
-    const original = values[origIdx] ?? "";
+    const word = values[wordIdx] ?? "";
     const meaning = values[meaningIdx] ?? "";
-    const note = noteIdx !== -1 ? (values[noteIdx] ?? "") : "";
+    const note =
+      noteIdx !== -1
+        ? (values[noteIdx] ?? "")
+        : notesIdx !== -1
+          ? (values[notesIdx] ?? "")
+          : "";
+    const example_sentence =
+      exampleIdx !== -1 ? (values[exampleIdx] ?? "") : "";
+    const category = categoryIdx !== -1 ? (values[categoryIdx] ?? "") : "";
+    const level = levelIdx !== -1 ? (values[levelIdx] ?? "") : "";
+    const freqRaw = freqIdx !== -1 ? values[freqIdx] : "";
+    const frequency_rank = freqRaw ? parseInt(freqRaw, 10) : null;
 
-    if (!type || !original || !meaning) continue;
+    if (!type || !word || !meaning) continue;
 
-    results.push({ type, original, meaning, note });
+    results.push({
+      type,
+      word,
+      meaning,
+      note,
+      example_sentence,
+      category,
+      level,
+      frequency_rank: Number.isNaN(frequency_rank) ? null : frequency_rank,
+    });
   }
 
   return results;
@@ -288,7 +325,9 @@ function ImportModal({
       }
 
       const data = await res.json();
-      toast.success(`Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}`);
+      toast.success(
+        `Imported ${data.imported} item${data.imported !== 1 ? "s" : ""}`,
+      );
       setImportLanguage("");
       setImportFile(null);
       if (fileRef.current) fileRef.current.value = "";
@@ -338,14 +377,18 @@ function ImportModal({
               onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
             />
             <p className="text-xs text-muted-foreground">
-              CSV must have columns: type, original, meaning, note (optional)
+              CSV must have columns: type, word, meaning. Optional:
+              example_sentence, category, level, frequency_rank, note
             </p>
-            <div className="rounded-lg border bg-muted/50 p-2 font-mono text-xs leading-relaxed">
+            <div className="rounded-lg border bg-muted/50 p-2 font-mono text-[0.375rem] leading-snug break-all">
               <p className="font-medium text-foreground">Example:</p>
-              <p>type,original,meaning,note</p>
-              <p>word,bonjour,hello,greeting</p>
-              <p>phrase,merci beaucoup,thank you very much,</p>
-              <p>noun,bienvenue,welcome,</p>
+              <p>
+                type,word,meaning,example_sentence,category,level,frequency_rank
+              </p>
+              <p>
+                noun,hello,سلام,&quot;Hello, how are
+                you?&quot;,people_relationships,elementary,100
+              </p>
             </div>
           </div>
         </div>
@@ -374,8 +417,12 @@ function AddModal({
 }) {
   const [language, setLanguage] = useState("");
   const [type, setType] = useState("");
-  const [original, setOriginal] = useState("");
+  const [word, setWord] = useState("");
   const [meaning, setMeaning] = useState("");
+  const [exampleSentence, setExampleSentence] = useState("");
+  const [category, setCategory] = useState("other");
+  const [level, setLevel] = useState("intermediate");
+  const [frequencyRank, setFrequencyRank] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -385,7 +432,17 @@ function AddModal({
     const res = await fetch("/api/vocabulary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language, type, original, meaning, notes }),
+      body: JSON.stringify({
+        language,
+        type,
+        word,
+        meaning,
+        example_sentence: exampleSentence,
+        category,
+        level,
+        frequency_rank: frequencyRank ? parseInt(frequencyRank, 10) : null,
+        notes,
+      }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -395,8 +452,12 @@ function AddModal({
     toast.success("Vocabulary added!");
     setLanguage("");
     setType("");
-    setOriginal("");
+    setWord("");
     setMeaning("");
+    setExampleSentence("");
+    setCategory("other");
+    setLevel("intermediate");
+    setFrequencyRank("");
     setNotes("");
     onOpenChange(false);
     onAdded();
@@ -414,7 +475,11 @@ function AddModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="add-language">Language</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v ?? "")} required>
+                <Select
+                  value={language}
+                  onValueChange={(v) => setLanguage(v ?? "")}
+                  required
+                >
                   <SelectTrigger id="add-language" className="w-full">
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
@@ -426,24 +491,30 @@ function AddModal({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="add-type">Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
+                <Select
+                  value={type}
+                  onValueChange={(v) => setType(v ?? "")}
+                  required
+                >
                   <SelectTrigger id="add-type" className="w-full">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
                     {VOCAB_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-original">Original</Label>
+              <Label htmlFor="add-word">Word</Label>
               <Textarea
-                id="add-original"
-                value={original}
-                onChange={(e) => setOriginal(e.target.value)}
+                id="add-word"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
                 className="min-h-[80px]"
                 required
               />
@@ -459,6 +530,63 @@ function AddModal({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="add-example">Example sentence (optional)</Label>
+              <Textarea
+                id="add-example"
+                value={exampleSentence}
+                onChange={(e) => setExampleSentence(e.target.value)}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-category">Category</Label>
+                <Select
+                  value={category}
+                  onValueChange={(v) => setCategory(v ?? "other")}
+                >
+                  <SelectTrigger id="add-category" className="w-full">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORD_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-level">Level</Label>
+                <Select
+                  value={level}
+                  onValueChange={(v) => setLevel(v ?? "intermediate")}
+                >
+                  <SelectTrigger id="add-level" className="w-full">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORD_LEVELS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-frequency">Frequency rank (optional)</Label>
+              <Input
+                id="add-frequency"
+                type="number"
+                min={1}
+                value={frequencyRank}
+                onChange={(e) => setFrequencyRank(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="add-notes">Notes (optional)</Label>
               <Textarea
                 id="add-notes"
@@ -469,7 +597,11 @@ function AddModal({
             </div>
           </div>
           <DialogFooter className="flex-row">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
@@ -496,8 +628,16 @@ function EditModal({
 }) {
   const [language, setLanguage] = useState(item?.language ?? "");
   const [type, setType] = useState(item?.type ?? "");
-  const [original, setOriginal] = useState(item?.original ?? "");
+  const [word, setWord] = useState(item?.word ?? "");
   const [meaning, setMeaning] = useState(item?.meaning ?? "");
+  const [exampleSentence, setExampleSentence] = useState(
+    item?.example_sentence ?? "",
+  );
+  const [category, setCategory] = useState(item?.category ?? "other");
+  const [level, setLevel] = useState(item?.level ?? "intermediate");
+  const [frequencyRank, setFrequencyRank] = useState(
+    item?.frequency_rank != null ? String(item.frequency_rank) : "",
+  );
   const [notes, setNotes] = useState(item?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -508,7 +648,17 @@ function EditModal({
     const res = await fetch(`/api/vocabulary/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language, type, original, meaning, notes }),
+      body: JSON.stringify({
+        language,
+        type,
+        word,
+        meaning,
+        example_sentence: exampleSentence,
+        category,
+        level,
+        frequency_rank: frequencyRank ? parseInt(frequencyRank, 10) : null,
+        notes,
+      }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -527,14 +677,18 @@ function EditModal({
           <DialogHeader>
             <DialogTitle>Edit Vocabulary</DialogTitle>
             <DialogDescription>
-              Edit &ldquo;{item?.original}&rdquo;
+              Edit &ldquo;{item?.word}&rdquo;
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-language">Language</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v ?? "")} required>
+                <Select
+                  value={language}
+                  onValueChange={(v) => setLanguage(v ?? "")}
+                  required
+                >
                   <SelectTrigger id="edit-language" className="w-full">
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
@@ -546,24 +700,30 @@ function EditModal({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-type">Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
+                <Select
+                  value={type}
+                  onValueChange={(v) => setType(v ?? "")}
+                  required
+                >
                   <SelectTrigger id="edit-type" className="w-full">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
                     {VOCAB_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-original">Original</Label>
+              <Label htmlFor="edit-word">Word</Label>
               <Textarea
-                id="edit-original"
-                value={original}
-                onChange={(e) => setOriginal(e.target.value)}
+                id="edit-word"
+                value={word}
+                onChange={(e) => setWord(e.target.value)}
                 className="min-h-[80px]"
                 required
               />
@@ -579,6 +739,63 @@ function EditModal({
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="edit-example">Example sentence (optional)</Label>
+              <Textarea
+                id="edit-example"
+                value={exampleSentence}
+                onChange={(e) => setExampleSentence(e.target.value)}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <Select
+                  value={category}
+                  onValueChange={(v) => setCategory(v ?? "other")}
+                >
+                  <SelectTrigger id="edit-category" className="w-full">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORD_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-level">Level</Label>
+                <Select
+                  value={level}
+                  onValueChange={(v) => setLevel(v ?? "intermediate")}
+                >
+                  <SelectTrigger id="edit-level" className="w-full">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WORD_LEVELS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-frequency">Frequency rank (optional)</Label>
+              <Input
+                id="edit-frequency"
+                type="number"
+                min={1}
+                value={frequencyRank}
+                onChange={(e) => setFrequencyRank(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="edit-notes">Notes (optional)</Label>
               <Textarea
                 id="edit-notes"
@@ -589,7 +806,11 @@ function EditModal({
             </div>
           </div>
           <DialogFooter className="flex-row">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
@@ -606,18 +827,23 @@ function EditModal({
 export default function VocabularyPage() {
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [, setTotal] = useState(0);
+  const [vocabTotal, setVocabTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [language, setLanguage] = useState("");
   const [type, setType] = useState("");
+  const [category, setCategory] = useState("");
+  const [level, setLevel] = useState("");
   const [sort, setSort] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const [editItem, setEditItem] = useState<VocabularyItem | null>(null);
 
   const fetchData = useCallback(() => {
@@ -625,6 +851,8 @@ export default function VocabularyPage() {
     if (debouncedSearch) params.set("search", debouncedSearch);
     if (language) params.set("language", language);
     if (type) params.set("type", type);
+    if (category) params.set("category", category);
+    if (level) params.set("level", level);
     params.set("sort", sort);
     params.set("page", String(page));
 
@@ -635,50 +863,130 @@ export default function VocabularyPage() {
         setTotal(d.total);
         setTotalPages(d.totalPages);
       });
-  }, [debouncedSearch, language, type, sort, page]);
+  }, [debouncedSearch, language, type, category, level, sort, page]);
+
+  const fetchVocabTotal = useCallback(() => {
+    return fetch("/api/vocabulary?dashboard=true")
+      .then((r) => r.json())
+      .then((d) => setVocabTotal(d.total ?? 0));
+  }, []);
+
+  const refreshData = useCallback(() => {
+    setLoading(true);
+    Promise.all([fetchData(), fetchVocabTotal()]).finally(() =>
+      setLoading(false),
+    );
+  }, [fetchData, fetchVocabTotal]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetchData().finally(() => setLoading(false));
-  }, [fetchData]);
+    Promise.all([fetchData(), fetchVocabTotal()]).finally(() =>
+      setLoading(false),
+    );
+  }, [fetchData, fetchVocabTotal]);
 
   async function handleDelete() {
     if (!deleteId) return;
     await fetch(`/api/vocabulary/${deleteId}`, { method: "DELETE" });
     setDeleteId(null);
-    setLoading(true);
-    fetchData().finally(() => setLoading(false));
+    refreshData();
+  }
+
+  async function handleDeleteAll() {
+    setDeletingAll(true);
+    try {
+      const res = await fetch("/api/vocabulary", { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      const data = await res.json();
+      toast.success(
+        `Deleted ${data.deleted} item${data.deleted !== 1 ? "s" : ""}`,
+      );
+      setDeleteAllOpen(false);
+      setPage(1);
+      refreshData();
+    } catch {
+      toast.error("Failed to delete vocabulary");
+    } finally {
+      setDeletingAll(false);
+    }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Vocabulary</h1>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setImportOpen(true)}
-          >
-            <Upload className="size-4" />
-            Import
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportOpen(true)}
-          >
-            <Download className="size-4" />
-            Export
-          </Button>
-          <Button
-            variant="default"
-            size="icon"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="size-4" />
-          </Button>
+        <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-start">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setExportOpen(true)}
+            >
+              <Download className="size-4" />
+              Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="size-4" />
+              Import
+            </Button>
+            <Dialog open={deleteAllOpen} onOpenChange={setDeleteAllOpen}>
+              <DialogTrigger
+                render={
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={vocabTotal === 0}
+                  />
+                }
+              >
+                <Trash2 className="size-4" />
+                Delete All
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete all vocabulary?</DialogTitle>
+                  <DialogDescription>
+                    This will permanently delete all {vocabTotal} vocabulary
+                    item
+                    {vocabTotal !== 1 ? "s" : ""}. This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeleteAllOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                  >
+                    <Trash2 className="size-4" />
+                    {deletingAll ? "Deleting..." : "Delete All"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <div className="shrink-0">
+            <Button
+              variant="default"
+              size="sm"
+              className="size-7 p-0 md:h-7 md:w-auto md:px-2.5"
+              onClick={() => setAddOpen(true)}
+              aria-label="Add vocabulary"
+            >
+              <Plus className="size-4" />
+              <span className="hidden md:inline">Add</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -686,27 +994,20 @@ export default function VocabularyPage() {
       <ImportModal
         open={importOpen}
         onOpenChange={setImportOpen}
-        onImported={() => {
-          setLoading(true);
-          fetchData().finally(() => setLoading(false));
-        }}
+        onImported={refreshData}
       />
       <AddModal
         open={addOpen}
         onOpenChange={setAddOpen}
-        onAdded={() => {
-          setLoading(true);
-          fetchData().finally(() => setLoading(false));
-        }}
+        onAdded={refreshData}
       />
       <EditModal
         item={editItem}
         open={editItem !== null}
-        onOpenChange={(open) => { if (!open) setEditItem(null); }}
-        onUpdated={() => {
-          setLoading(true);
-          fetchData().finally(() => setLoading(false));
+        onOpenChange={(open) => {
+          if (!open) setEditItem(null);
         }}
+        onUpdated={refreshData}
       />
 
       <Card>
@@ -727,7 +1028,7 @@ export default function VocabularyPage() {
                 className="w-full pl-8"
               />
             </div>
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Select
                 value={language}
                 onValueChange={(v) => {
@@ -764,6 +1065,46 @@ export default function VocabularyPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                value={category}
+                onValueChange={(v) => {
+                  setCategory(v ?? "");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {WORD_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={level}
+                onValueChange={(v) => {
+                  setLevel(v ?? "");
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {WORD_LEVELS.map((l) => (
+                    <SelectItem key={l.value} value={l.value}>
+                      {l.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Select
               value={sort}
               onValueChange={(v) => {
@@ -779,6 +1120,7 @@ export default function VocabularyPage() {
                 <SelectItem value="oldest">Oldest</SelectItem>
                 <SelectItem value="score_low">Lowest Score</SelectItem>
                 <SelectItem value="score_high">Highest Score</SelectItem>
+                <SelectItem value="frequency">Frequency Rank</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -796,8 +1138,10 @@ export default function VocabularyPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Original</TableHead>
+                  <TableHead>Word</TableHead>
                   <TableHead>Meaning</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Level</TableHead>
                   <TableHead>Language</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Score</TableHead>
@@ -807,10 +1151,16 @@ export default function VocabularyPage() {
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      {item.original}
-                    </TableCell>
+                    <TableCell className="font-medium">{item.word}</TableCell>
                     <TableCell>{item.meaning}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        {categoryLabel(item.category)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{levelLabel(item.level)}</Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{item.language}</Badge>
                     </TableCell>
@@ -819,11 +1169,11 @@ export default function VocabularyPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon-sm"
                           onClick={() => setEditItem(item)}
                         >
-                          <Pencil className="size-3.5" />
+                          <Pencil className="size-4" />
                         </Button>
                         <DeleteButton
                           item={item}
@@ -855,13 +1205,19 @@ export default function VocabularyPage() {
                     <span className="inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
                       {item.type}
                     </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {categoryLabel(item.category)}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {levelLabel(item.level)}
+                    </Badge>
                     <span className="inline-flex h-5 items-center rounded-full bg-blue-500/10 px-2 text-xs font-medium text-blue-600">
                       Score: {item.score}
                     </span>
                   </div>
                   <div className="flex shrink-0 gap-1">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="icon-lg"
                       onClick={() => setEditItem(item)}
                     >
@@ -877,7 +1233,7 @@ export default function VocabularyPage() {
                 </div>
                 <div className="mt-3 space-y-1">
                   <p className="font-bold text-foreground text-xl">
-                    {item.original}
+                    {item.word}
                   </p>
                   <p className="text-muted-foreground text-xl">
                     {item.meaning}

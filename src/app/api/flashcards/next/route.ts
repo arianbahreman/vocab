@@ -5,11 +5,12 @@ const VALID_LANGUAGES = ["english", "french"]
 
 interface DueCard {
   id: string
-  original: string
+  word: string
   meaning: string
   language: string
   type: string | null
   notes: string | null
+  example_sentence: string | null
   score: number
   correct_count: number
   wrong_count: number
@@ -21,11 +22,12 @@ interface DueCard {
 function mapCard(card: DueCard, choices: string[], dueCount: number) {
   return {
     id: card.id,
-    original: card.original,
+    word: card.word,
     meaning: card.meaning,
     language: card.language,
     type: card.type,
     notes: card.notes,
+    exampleSentence: card.example_sentence,
     score: card.score,
     correctCount: card.correct_count,
     wrongCount: card.wrong_count,
@@ -96,7 +98,7 @@ export async function GET(request: NextRequest) {
 
   let dueQuery = supabase
     .from("vocabulary")
-    .select("id, original, meaning, language, type, notes, score, correct_count, wrong_count, ease_factor, interval, repetitions")
+    .select("id, word, meaning, language, type, notes, example_sentence, score, correct_count, wrong_count, ease_factor, interval, repetitions")
     .eq("user_id", user.id)
     .lte("next_review", now)
     .order("next_review", { ascending: true })

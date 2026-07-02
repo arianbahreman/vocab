@@ -11,15 +11,20 @@ export async function PUT(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
+  const word = body.word ?? body.original
 
   const { data, error } = await supabase
     .from("vocabulary")
     .update({
       language: body.language,
       type: body.type,
-      original: body.original,
+      word,
       meaning: body.meaning,
       notes: body.notes,
+      example_sentence: body.example_sentence ?? "",
+      category: body.category ?? "other",
+      level: body.level ?? "intermediate",
+      frequency_rank: body.frequency_rank ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

@@ -2,6 +2,17 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { currentStreak } from "@/lib/vocab"
 
+interface ImportItem {
+  type: string
+  word: string
+  meaning: string
+  note?: string
+  example_sentence?: string
+  category?: string
+  level?: string
+  frequency_rank?: number | null
+}
+
 export async function GET(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -39,6 +50,8 @@ export async function GET(request: Request) {
   const search = searchParams.get("search") || ""
   const language = searchParams.get("language") || ""
   const type = searchParams.get("type") || ""
+  const category = searchParams.get("category") || ""
+  const level = searchParams.get("level") || ""
   const sort = searchParams.get("sort") || "newest"
   const isExport = searchParams.get("export") === "true"
   const page = parseInt(searchParams.get("page") || "1")
@@ -51,10 +64,12 @@ export async function GET(request: Request) {
     .eq("user_id", user.id)
 
   if (search) {
-    query = query.or(`original.ilike.%${search}%,meaning.ilike.%${search}%`)
+    query = query.or(`word.ilike.%${search}%,meaning.ilike.%${search}%`)
   }
-  if (language) query = query.eq("language", language)
-  if (type) query = query.eq("type", type)
+  if (language && language !== "all") query = query.eq("language", language)
+  if (type && type !== "all") query = query.eq("type", type)
+  if (category && category !== "all") query = query.eq("category", category)
+  if (level && level !== "all") query = query.eq("level", level)
 
   switch (sort) {
     case "oldest":
@@ -65,6 +80,9 @@ export async function GET(request: Request) {
       break
     case "score_high":
       query = query.order("score", { ascending: false })
+      break
+    case "frequency":
+      query = query.order("frequency_rank", { ascending: true, nullsFirst: false })
       break
     default:
       query = query.order("created_at", { ascending: false })
@@ -100,13 +118,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const rows = body.items.map((item: { type: string; original: string; meaning: string; note?: string }) => ({
+    const rows = body.items.map((item: ImportItem) => ({
       user_id: user.id,
       language: body.language,
       type: item.type,
-      original: item.original,
+      word: item.word,
       meaning: item.meaning,
       notes: item.note || "",
+      example_sentence: item.example_sentence || "",
+      category: item.category || "other",
+      level: item.level || "intermediate",
+      frequency_rank: item.frequency_rank ?? null,
     }))
 
     const { data, error } = await supabase
@@ -121,7 +143,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ imported: data?.length ?? 0 }, { status: 201 })
   }
 
-  if (!body.language || !body.type || !body.original || !body.meaning) {
+  const word = body.word ?? body.original
+  if (!body.language || !body.type || !word || !body.meaning) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
@@ -131,9 +154,13 @@ export async function POST(request: Request) {
       user_id: user.id,
       language: body.language,
       type: body.type,
-      original: body.original,
+      word,
       meaning: body.meaning,
       notes: body.notes || "",
+      example_sentence: body.example_sentence || "",
+      category: body.category || "other",
+      level: body.level || "intermediate",
+      frequency_rank: body.frequency_rank ?? null,
     })
     .select()
     .single()
@@ -143,4 +170,18 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(data, { status: 201 })
+}
+
+export async function DELETE() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { error, count } = await supabase
+    .from("vocabulary")
+    .delete({ count: "exact" })
+    .eq("user_id", user.id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ deleted: count ?? 0 })
 }

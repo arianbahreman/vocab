@@ -3,10 +3,11 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, BookOpen } from "lucide-react";
 
 export interface FlashcardProps {
-  original: string;
+  word: string;
   meaning: string;
   type?: string | null;
   notes?: string | null;
+  exampleSentence?: string | null;
   score?: number;
   correctCount?: number;
   wrongCount?: number;
@@ -16,10 +17,11 @@ export interface FlashcardProps {
 }
 
 export function Flashcard({
-  original,
+  word,
   meaning,
   type,
   notes,
+  exampleSentence,
   score,
   correctCount,
   wrongCount,
@@ -46,7 +48,7 @@ export function Flashcard({
               {type}
             </Badge>
           )}
-          <p className="text-4xl font-bold leading-tight">{original}</p>
+          <p className="text-4xl font-bold leading-tight">{word}</p>
           <p className="mt-4 text-sm text-muted-foreground">
             {frontHint ?? (
               <>
@@ -64,6 +66,11 @@ export function Flashcard({
         <div className="flashcard-back flashcard-backface-hidden flashcard-rotate-180 absolute inset-0 flex flex-col rounded-xl ring-1 ring-foreground/10">
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
             <p className="text-2xl font-semibold">{meaning}</p>
+            {exampleSentence && (
+              <p className="max-w-md text-sm italic text-muted-foreground">
+                &ldquo;{exampleSentence}&rdquo;
+              </p>
+            )}
             {notes && (
               <p className="max-w-md text-sm text-muted-foreground">{notes}</p>
             )}
