@@ -11,7 +11,8 @@ export interface FlashcardProps {
   correctCount?: number;
   wrongCount?: number;
   revealed: boolean;
-  onReveal: () => void;
+  onReveal?: () => void;
+  frontHint?: string;
 }
 
 export function Flashcard({
@@ -24,11 +25,12 @@ export function Flashcard({
   wrongCount,
   revealed,
   onReveal,
+  frontHint,
 }: FlashcardProps) {
   return (
     <div
       className="flashcard-perspective mx-auto w-full cursor-pointer"
-      onClick={() => !revealed && onReveal()}
+      onClick={() => onReveal && !revealed && onReveal()}
     >
       <div
         className={cn(
@@ -46,11 +48,15 @@ export function Flashcard({
           )}
           <p className="text-4xl font-bold leading-tight">{original}</p>
           <p className="mt-4 text-sm text-muted-foreground">
-            Press{" "}
-            <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs font-medium">
-              Space
-            </kbd>{" "}
-            to reveal
+            {frontHint ?? (
+              <>
+                Press{" "}
+                <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs font-medium">
+                  Space
+                </kbd>{" "}
+                to reveal
+              </>
+            )}
           </p>
         </div>
 

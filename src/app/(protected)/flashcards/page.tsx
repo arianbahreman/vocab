@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { applyReview } from "@/lib/srs";
 import { Flashcard } from "@/components/flashcards/Flashcard";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   RefreshCw,
   CheckCircle2,
@@ -30,6 +31,7 @@ interface FlashCard {
   id: string;
   original: string;
   meaning: string;
+  language?: string;
   type?: string | null;
   notes?: string | null;
   score?: number;
@@ -77,54 +79,132 @@ function FlashcardsContent() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cardQueueRef = useRef<FlashCard[]>([]);
+  const preloadingRef = useRef(false);
+  const currentCardIdRef = useRef<string | null>(null);
 
-  const loadCard = useCallback(() => {
+  const fetchCards = useCallback(
+    async (limit: number, excludeIds: string[]): Promise<{
+      cards?: FlashCard[];
+      dueCount?: number;
+      done?: boolean;
+      nextDue?: string | null;
+      empty?: boolean;
+    } | null> => {
+      const params = new URLSearchParams();
+      if (language !== "all") params.set("language", language);
+      params.set("limit", String(limit));
+      if (excludeIds.length > 0) params.set("exclude", excludeIds.join(","));
+
+      try {
+        const res = await fetch(`/api/flashcards/next?${params.toString()}`);
+        if (!res.ok) {
+          const body = await res.json();
+          if (body.error === "No vocabulary found") return { empty: true };
+          return null;
+        }
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
+    [language]
+  );
+
+  const applyCard = useCallback((data: FlashCard) => {
+    currentCardIdRef.current = data.id;
+    setCard(data);
+    setSessionTotal((prev) => (prev === null ? data.dueCount : prev));
+    if (data.choices) {
+      const options = [data.meaning, ...data.choices];
+      for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [options[i], options[j]] = [options[j], options[i]];
+      }
+      setQuizOptions(options);
+    }
+    setLoading(false);
+    setSubmitting(false);
+  }, []);
+
+  const preloadNextCard = useCallback(async () => {
+    if (preloadingRef.current) return;
+    preloadingRef.current = true;
+
+    const excludeIds: string[] = [];
+    if (currentCardIdRef.current) excludeIds.push(currentCardIdRef.current);
+    cardQueueRef.current.forEach((c) => excludeIds.push(c.id));
+
+    const data = await fetchCards(2, excludeIds);
+
+    if (data?.cards && data.cards.length > 0) {
+      for (const c of data.cards) {
+        if (!cardQueueRef.current.some((qc) => qc.id === c.id)) {
+          cardQueueRef.current.push(c);
+        }
+      }
+    }
+
+    preloadingRef.current = false;
+  }, [fetchCards]);
+
+  const loadCard = useCallback(async () => {
     if (advanceTimer.current) {
       clearTimeout(advanceTimer.current);
       advanceTimer.current = null;
     }
 
-    const params = new URLSearchParams();
-    if (language !== "all") params.set("language", language);
+    if (cardQueueRef.current.length > 0) {
+      const data = cardQueueRef.current.shift()!;
+      applyCard(data);
+      if (cardQueueRef.current.length < 1) {
+        preloadNextCard();
+      }
+      return;
+    }
 
-    fetch(`/api/flashcards/next?${params.toString()}`)
-      .then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json();
-          if (data.error === "No vocabulary found") {
-            setEmpty(true);
-          } else {
-            setError(data.error || "Failed to load card");
-          }
-          return null;
+    const excludeIds: string[] = [];
+    if (currentCardIdRef.current) excludeIds.push(currentCardIdRef.current);
+
+    const data = await fetchCards(2, excludeIds);
+
+    if (!data) {
+      setError("Failed to load card");
+      setLoading(false);
+      setSubmitting(false);
+      return;
+    }
+
+    if (data.empty) {
+      setEmpty(true);
+      setLoading(false);
+      setSubmitting(false);
+      return;
+    }
+
+    if (data.done) {
+      setDone(true);
+      setNextDue(data.nextDue ?? null);
+      setLoading(false);
+      setSubmitting(false);
+      return;
+    }
+
+    if (data.cards && data.cards.length > 0) {
+      applyCard(data.cards[0]);
+      for (let i = 1; i < data.cards.length; i++) {
+        const c = data.cards[i];
+        if (!cardQueueRef.current.some((qc) => qc.id === c.id)) {
+          cardQueueRef.current.push(c);
         }
-        return res.json();
-      })
-      .then((data) => {
-        if (!data) return;
-        if (data.done) {
-          setDone(true);
-          setNextDue(data.nextDue);
-          return;
-        }
-        setCard(data);
-        setSessionTotal((prev) => (prev === null ? data.dueCount : prev));
-        if (data.choices) {
-          const options = [data.meaning, ...data.choices];
-          for (let i = options.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [options[i], options[j]] = [options[j], options[i]];
-          }
-          setQuizOptions(options);
-        }
-      })
-      .catch(() => {
-        setError("Failed to load card");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [language]);
+      }
+      preloadNextCard();
+    } else {
+      setDone(true);
+      setLoading(false);
+      setSubmitting(false);
+    }
+  }, [fetchCards, applyCard, preloadNextCard]);
 
   useEffect(() => {
     loadCard();
@@ -145,7 +225,6 @@ function FlashcardsContent() {
       setRevealed(false);
       setSelectedAnswer(null);
       setCorrectAnswer(null);
-      setLoading(true);
       loadCard();
     },
     [submitting, card, loadCard]
@@ -156,6 +235,7 @@ function FlashcardsContent() {
       if (!card || selectedAnswer !== null) return;
       setSelectedAnswer(answer);
       setCorrectAnswer(card.meaning);
+      setRevealed(true);
 
       const isCorrect = answer === card.meaning;
       const quality = isCorrect ? 4 : 0;
@@ -173,7 +253,6 @@ function FlashcardsContent() {
             setRevealed(false);
             setSelectedAnswer(null);
             setCorrectAnswer(null);
-            setLoading(true);
             loadCard();
           })
           .catch(() => {
@@ -188,20 +267,24 @@ function FlashcardsContent() {
     function handleKeyDown(e: KeyboardEvent) {
       if (submitting) return;
 
-      if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        if (!revealed && card && !done) {
-          setRevealed(true);
+      if (mode === "rate") {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          if (!revealed && card && !done) {
+            setRevealed(true);
+          }
         }
       }
 
-      if (revealed && card && !done) {
+      if (card && !done) {
         const key = parseInt(e.key);
         if (key >= 1 && key <= 4) {
           e.preventDefault();
           if (mode === "rate") {
-            const grade = GRADES[key - 1];
-            if (grade) handleGrade(grade.quality);
+            if (revealed) {
+              const grade = GRADES[key - 1];
+              if (grade) handleGrade(grade.quality);
+            }
           } else if (mode === "quiz" && selectedAnswer === null) {
             const option = quizOptions[key - 1];
             if (option) handleQuizSelect(option);
@@ -221,6 +304,9 @@ function FlashcardsContent() {
     } else {
       params.set("language", value);
     }
+    cardQueueRef.current = [];
+    preloadingRef.current = false;
+    currentCardIdRef.current = null;
     setSessionTotal(null);
     setReviewedCount(0);
     setLoading(true);
@@ -404,7 +490,8 @@ function FlashcardsContent() {
         correctCount={card.correctCount}
         wrongCount={card.wrongCount}
         revealed={revealed}
-        onReveal={() => setRevealed(true)}
+        onReveal={mode === "rate" ? () => setRevealed(true) : undefined}
+        frontHint={mode === "quiz" ? "Select the correct meaning" : undefined}
       />
 
       {revealed && mode === "rate" && (
@@ -435,7 +522,7 @@ function FlashcardsContent() {
         </div>
       )}
 
-      {revealed && mode === "quiz" && (
+      {mode === "quiz" && (
         <div className="grid grid-cols-2 gap-3">
           {quizOptions.map((option, i) => {
             const isSelected = selectedAnswer === option;
@@ -498,33 +585,24 @@ function Header({
         Flashcards
       </h1>
       <div className="flex items-center gap-3">
-        <div className="flex overflow-hidden rounded-lg border border-border">
-          <button
-            className={cn(
-              "px-3 py-1.5 text-sm font-medium transition-colors",
-              mode === "rate"
-                ? "bg-primary text-primary-foreground"
-                : "bg-background text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => onModeChange("rate")}
-          >
-            Self-rate
-          </button>
-          <button
-            className={cn(
-              "px-3 py-1.5 text-sm font-medium transition-colors",
-              mode === "quiz"
-                ? "bg-primary text-primary-foreground"
-                : "bg-background text-muted-foreground hover:text-foreground",
-              modeDisabled && "cursor-not-allowed opacity-40"
-            )}
-            onClick={() => !modeDisabled && onModeChange("quiz")}
-            disabled={modeDisabled}
-            title={modeDisabled ? "Add more vocabulary for quiz mode" : undefined}
-          >
-            Quiz
-          </button>
-        </div>
+        <Tabs
+          value={mode}
+          onValueChange={(val) => {
+            if (val === "quiz" && modeDisabled) return;
+            onModeChange(val as "rate" | "quiz");
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="rate">Self-rate</TabsTrigger>
+            <TabsTrigger
+              value="quiz"
+              disabled={modeDisabled}
+              title={modeDisabled ? "Add more vocabulary for quiz mode" : undefined}
+            >
+              Quiz
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Select value={language} onValueChange={onLanguageChange}>
           <SelectTrigger className="w-28">
             <SelectValue placeholder="Language" />

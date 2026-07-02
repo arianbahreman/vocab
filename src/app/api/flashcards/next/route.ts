@@ -3,6 +3,49 @@ import { NextRequest, NextResponse } from "next/server"
 
 const VALID_LANGUAGES = ["english", "french"]
 
+interface DueCard {
+  id: string
+  original: string
+  meaning: string
+  language: string
+  type: string | null
+  notes: string | null
+  score: number
+  correct_count: number
+  wrong_count: number
+  ease_factor: number
+  interval: number
+  repetitions: number
+}
+
+function mapCard(card: DueCard, choices: string[], dueCount: number) {
+  return {
+    id: card.id,
+    original: card.original,
+    meaning: card.meaning,
+    language: card.language,
+    type: card.type,
+    notes: card.notes,
+    score: card.score,
+    correctCount: card.correct_count,
+    wrongCount: card.wrong_count,
+    easeFactor: card.ease_factor,
+    interval: card.interval,
+    repetitions: card.repetitions,
+    dueCount,
+    choices,
+  }
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -13,6 +56,14 @@ export async function GET(request: NextRequest) {
     language && language !== "all" && VALID_LANGUAGES.includes(language)
       ? language
       : null
+
+  const excludeParam = request.nextUrl.searchParams.get("exclude")
+  const excludeIds = excludeParam ? excludeParam.split(",").filter(Boolean) : []
+
+  const limit = Math.min(
+    Math.max(parseInt(request.nextUrl.searchParams.get("limit") || "1"), 1),
+    20
+  )
 
   const now = new Date().toISOString()
 
@@ -46,51 +97,37 @@ export async function GET(request: NextRequest) {
     .eq("user_id", user.id)
     .lte("next_review", now)
     .order("next_review", { ascending: true })
-    .limit(1)
+    .limit(limit)
 
   if (filterLanguage) dueQuery = dueQuery.eq("language", filterLanguage)
+  if (excludeIds.length > 0) dueQuery = dueQuery.not("id", "in", `(${excludeIds.join(",")})`)
 
   const { data: due } = await dueQuery
 
   if (due && due.length > 0) {
-    const card = due[0]
+    const dueIds = due.map((c) => c.id)
 
     let distractorQuery = supabase
       .from("vocabulary")
       .select("meaning")
       .eq("user_id", user.id)
-      .neq("id", card.id)
-      .limit(24)
+      .not("id", "in", `(${dueIds.join(",")})`)
+      .limit(Math.min(limit * 12, 48))
 
     if (filterLanguage) distractorQuery = distractorQuery.eq("language", filterLanguage)
 
     const { data: distractors } = await distractorQuery
-
-    const choices = (distractors || [])
+    const pool = (distractors || [])
       .map((d) => d.meaning)
-      .filter((m): m is string => !!m && m !== card.meaning)
+      .filter((m): m is string => !!m)
 
-    for (let i = choices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [choices[i], choices[j]] = [choices[j], choices[i]]
-    }
-
-    return NextResponse.json({
-      id: card.id,
-      original: card.original,
-      meaning: card.meaning,
-      language: card.language,
-      type: card.type,
-      notes: card.notes,
-      score: card.score,
-      correctCount: card.correct_count,
-      wrongCount: card.wrong_count,
-      easeFactor: card.ease_factor,
-      interval: card.interval,
-      repetitions: card.repetitions,
-      dueCount: dueCount ?? 0,
-      choices: choices.slice(0, 3),
+    const cards = due.map((card) => {
+      const available = pool.filter((m) => m !== card.meaning)
+      const shuffled = shuffle(available)
+      return mapCard(card, shuffled.slice(0, 3), dueCount ?? 0)
     })
+
+    return NextResponse.json({ cards, dueCount: dueCount ?? 0 })
   }
 
   let nextUpQuery = supabase
@@ -101,10 +138,12 @@ export async function GET(request: NextRequest) {
     .limit(1)
 
   if (filterLanguage) nextUpQuery = nextUpQuery.eq("language", filterLanguage)
+  if (excludeIds.length > 0) nextUpQuery = nextUpQuery.not("id", "in", `(${excludeIds.join(",")})`)
 
   const { data: nextUp } = await nextUpQuery
 
   return NextResponse.json({
+    cards: [],
     done: true,
     nextDue: nextUp?.[0]?.next_review ?? null,
     dueCount: 0,
