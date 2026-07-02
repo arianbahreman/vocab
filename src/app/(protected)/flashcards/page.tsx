@@ -53,7 +53,11 @@ const GRADES = [
 
 export default function FlashcardsPage() {
   return (
-    <Suspense fallback={<p className="text-center text-muted-foreground">Loading card...</p>}>
+    <Suspense
+      fallback={
+        <p className="text-center text-muted-foreground">Loading card...</p>
+      }
+    >
       <FlashcardsContent />
     </Suspense>
   );
@@ -84,7 +88,10 @@ function FlashcardsContent() {
   const currentCardIdRef = useRef<string | null>(null);
 
   const fetchCards = useCallback(
-    async (limit: number, excludeIds: string[]): Promise<{
+    async (
+      limit: number,
+      excludeIds: string[],
+    ): Promise<{
       cards?: FlashCard[];
       dueCount?: number;
       done?: boolean;
@@ -108,7 +115,7 @@ function FlashcardsContent() {
         return null;
       }
     },
-    [language]
+    [language],
   );
 
   const applyCard = useCallback((data: FlashCard) => {
@@ -227,7 +234,7 @@ function FlashcardsContent() {
       setCorrectAnswer(null);
       loadCard();
     },
-    [submitting, card, loadCard]
+    [submitting, card, loadCard],
   );
 
   const handleQuizSelect = useCallback(
@@ -260,7 +267,7 @@ function FlashcardsContent() {
           });
       }, 800);
     },
-    [card, selectedAnswer, loadCard]
+    [card, selectedAnswer, loadCard],
   );
 
   useEffect(() => {
@@ -295,7 +302,17 @@ function FlashcardsContent() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [revealed, card, done, mode, submitting, quizOptions, selectedAnswer, handleGrade, handleQuizSelect]);
+  }, [
+    revealed,
+    card,
+    done,
+    mode,
+    submitting,
+    quizOptions,
+    selectedAnswer,
+    handleGrade,
+    handleQuizSelect,
+  ]);
 
   function handleLanguageChange(value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -321,7 +338,7 @@ function FlashcardsContent() {
         interval: card.interval ?? 0,
         repetitions: card.repetitions ?? 0,
       },
-      quality
+      quality,
     );
     return formatRelative(result.nextReview.toISOString());
   }
@@ -398,12 +415,18 @@ function FlashcardsContent() {
               : "Add more vocabulary to keep studying."}
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Badge variant="secondary" className="h-auto gap-1.5 px-3 py-1.5 text-sm">
+            <Badge
+              variant="secondary"
+              className="h-auto gap-1.5 px-3 py-1.5 text-sm"
+            >
               <CheckCircle2 className="size-4 text-green-600" />
               Reviewed: {reviewedCount}
             </Badge>
             {sessionTotal !== null && sessionTotal > 0 && (
-              <Badge variant="secondary" className="h-auto gap-1.5 px-3 py-1.5 text-sm">
+              <Badge
+                variant="secondary"
+                className="h-auto gap-1.5 px-3 py-1.5 text-sm"
+              >
                 <RotateCw className="size-4" />
                 {Math.round((reviewedCount / sessionTotal) * 100)}%
               </Badge>
@@ -458,7 +481,7 @@ function FlashcardsContent() {
 
   return (
     <Tabs value={mode} onValueChange={handleModeChange}>
-      <div className="mx-auto max-w-lg space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="flex items-center gap-2 text-3xl font-bold">
             <GraduationCap className="size-8 text-muted-foreground" />
@@ -470,7 +493,9 @@ function FlashcardsContent() {
               <TabsTrigger
                 value="quiz"
                 disabled={!canQuiz}
-                title={!canQuiz ? "Add more vocabulary for quiz mode" : undefined}
+                title={
+                  !canQuiz ? "Add more vocabulary for quiz mode" : undefined
+                }
               >
                 Quiz
               </TabsTrigger>
@@ -530,7 +555,8 @@ function FlashcardsContent() {
                   variant={quality === 0 ? "destructive" : "outline"}
                   className={cn(
                     "h-auto flex-col gap-1 py-3 text-base font-semibold",
-                    quality === 5 && "bg-green-600/15 border-green-600/50 text-green-600 hover:bg-green-600/25"
+                    quality === 5 &&
+                      "bg-green-600/15 border-green-600/50 text-green-600 hover:bg-green-600/25",
                   )}
                   onClick={() => handleGrade(quality)}
                   disabled={submitting}
@@ -573,7 +599,10 @@ function FlashcardsContent() {
                 <Button
                   key={i}
                   variant={variant}
-                  className={cn("h-auto py-4 text-base font-semibold", extraClass)}
+                  className={cn(
+                    "h-auto py-4 text-base font-semibold",
+                    extraClass,
+                  )}
                   onClick={() => handleQuizSelect(option)}
                   disabled={submitting || selectedAnswer !== null}
                 >
@@ -630,7 +659,9 @@ function Header({
               <TabsTrigger
                 value="quiz"
                 disabled={modeDisabled}
-                title={modeDisabled ? "Add more vocabulary for quiz mode" : undefined}
+                title={
+                  modeDisabled ? "Add more vocabulary for quiz mode" : undefined
+                }
               >
                 Quiz
               </TabsTrigger>

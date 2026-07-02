@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { currentStreak } from "@/lib/vocab"
+import { currentStreak, dayKey } from "@/lib/vocab"
 import { NextResponse } from "next/server"
 import type { User } from "@supabase/supabase-js"
 
@@ -37,6 +37,24 @@ async function listAllUsers() {
   }
 
   return users
+}
+
+function buildActivityData(dates: string[], days: number) {
+  const counts = new Map<string, number>()
+  const now = new Date()
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    counts.set(dayKey(d), 0)
+  }
+  for (const iso of dates) {
+    const key = dayKey(new Date(iso))
+    if (counts.has(key)) counts.set(key, counts.get(key)! + 1)
+  }
+  return Array.from(counts.entries()).map(([day, reviews]) => ({
+    day,
+    reviews,
+  }))
 }
 
 export async function GET() {
@@ -79,6 +97,10 @@ export async function GET() {
       reviewsByUser.set(userId, list)
     }
 
+    let totalCorrect = 0
+    let totalWrong = 0
+    let activeUsers = 0
+
     const result = users.map((user) => {
       const vocab = vocabByUser.get(user.id) ?? []
       const reviewDates = reviewsByUser.get(user.id) ?? []
@@ -106,6 +128,12 @@ export async function GET() {
         return latest
       }, null)
 
+      const streak = currentStreak(reviewDates)
+
+      totalCorrect += correctAnswers
+      totalWrong += wrongAnswers
+      if (streak > 0) activeUsers++
+
       return {
         id: user.id,
         username: (user.user_metadata?.username as string | undefined) ?? "—",
@@ -113,17 +141,38 @@ export async function GET() {
         signedUpAt: user.created_at,
         lastSignInAt: user.last_sign_in_at ?? null,
         totalWords,
-        streak: currentStreak(reviewDates),
+        streak,
         avgScore,
         accuracy,
         dueCount,
         lastReviewedAt,
+        reviewDates,
+        correctAnswers,
+        wrongAnswers,
       }
     })
 
     result.sort((a, b) => a.username.localeCompare(b.username))
 
-    return NextResponse.json({ users: result })
+    const allReviewDates = result.flatMap((u) => u.reviewDates)
+    const activityData = buildActivityData(allReviewDates, 14)
+
+    const totalUsers = result.length
+    const totalWords = result.reduce((s, u) => s + u.totalWords, 0)
+    const totalAttempts = totalCorrect + totalWrong
+    const averageAccuracy =
+      totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0
+
+    return NextResponse.json({
+      users: result,
+      stats: {
+        totalUsers,
+        totalWords,
+        averageAccuracy,
+        activeUsers,
+        activityData,
+      },
+    })
   } catch (err) {
     console.error("Admin users list error:", err)
     return NextResponse.json(

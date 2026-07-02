@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   if (isDashboard) {
     const { data: all } = await supabase
       .from("vocabulary")
-      .select("language, score, next_review")
+      .select("language, score, next_review, category")
       .eq("user_id", user.id)
 
     const total = all?.length ?? 0
@@ -33,6 +33,11 @@ export async function GET(request: Request) {
     const lowScore = all?.filter((v) => v.score < 5).length ?? 0
     const now = new Date()
     const due = all?.filter((v) => new Date(v.next_review) <= now).length ?? 0
+
+    const categoryCounts: Record<string, number> = {}
+    for (const v of all ?? []) {
+      categoryCounts[v.category] = (categoryCounts[v.category] ?? 0) + 1
+    }
 
     const since = new Date(Date.now() - 30 * 86_400_000).toISOString()
     const { data: reviews } = await supabase
@@ -44,7 +49,7 @@ export async function GET(request: Request) {
     const reviewDates = (reviews ?? []).map((r) => r.reviewed_at)
     const streak = currentStreak(reviewDates)
 
-    return NextResponse.json({ total, english, french, lowScore, due, streak, reviewDates })
+    return NextResponse.json({ total, english, french, lowScore, due, streak, reviewDates, categoryCounts })
   }
 
   const search = searchParams.get("search") || ""

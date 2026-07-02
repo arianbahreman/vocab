@@ -58,6 +58,21 @@ import {
   levelLabel,
   type VocabularyItem,
 } from "@/lib/vocab";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { Pie, PieChart, Cell } from "recharts";
+
+const CATEGORY_COLORS = [
+  "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF",
+  "#FF9F40", "#E76F51", "#D4A5FF", "#A0D2DB", "#F8A5C2",
+  "#74B9FF", "#A29BFE", "#FD79A8", "#00CEC9", "#E17055",
+  "#6C5CE7", "#00B894", "#FDCB6E", "#E84393", "#0984E3",
+  "#636E72",
+]
 
 interface CsvRow {
   type: string;
@@ -796,6 +811,7 @@ export default function VocabularyPage() {
   const [items, setItems] = useState<VocabularyItem[]>([]);
   const [, setTotal] = useState(0);
   const [vocabTotal, setVocabTotal] = useState(0);
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
@@ -836,7 +852,10 @@ export default function VocabularyPage() {
   const fetchVocabTotal = useCallback(() => {
     return fetch("/api/vocabulary?dashboard=true")
       .then((r) => r.json())
-      .then((d) => setVocabTotal(d.total ?? 0));
+      .then((d) => {
+        setVocabTotal(d.total ?? 0);
+        setCategoryCounts(d.categoryCounts ?? {});
+      });
   }, []);
 
   const refreshData = useCallback(() => {
@@ -978,6 +997,89 @@ export default function VocabularyPage() {
         }}
         onUpdated={refreshData}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Words by Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            const chartData = Object.entries(categoryCounts)
+              .filter(([, count]) => count > 0)
+              .map(([value, count]) => ({
+                name: value,
+                value: count,
+                label: categoryLabel(value),
+              }))
+              .sort((a, b) => b.value - a.value)
+
+            if (chartData.length === 0) {
+              return (
+                <p className="text-sm text-muted-foreground">
+                  No vocabulary yet.
+                </p>
+              )
+            }
+
+            const chartConfig: ChartConfig = {}
+            for (const { name, label } of chartData) {
+              chartConfig[name] = { label }
+            }
+
+            return (
+              <>
+                <ChartContainer
+                  config={chartConfig}
+                  className="mx-auto h-64 aspect-square"
+                >
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={90}
+                      strokeWidth={0}
+                    >
+                      {chartData.map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <ChartTooltip
+                      content={
+                        <ChartTooltipContent
+                          formatter={(value, name) => (
+                            <span className="font-medium">
+                              {String(chartData.find((d) => d.name === name)?.label ?? name)}: {value}
+                            </span>
+                          )}
+                        />
+                      }
+                    />
+                  </PieChart>
+                </ChartContainer>
+                <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {chartData.map((d, i) => (
+                    <div key={d.name} className="flex items-center gap-1.5">
+                      <span
+                        className="size-2 rounded-full shrink-0"
+                        style={{
+                          backgroundColor:
+                            CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+                        }}
+                      />
+                      {d.label}: {d.value}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
