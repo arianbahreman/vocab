@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { applyReview } from "@/lib/srs";
 import { Flashcard } from "@/components/flashcards/Flashcard";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   RefreshCw,
   CheckCircle2,
@@ -332,10 +332,8 @@ function FlashcardsContent() {
         <Header
           language={language}
           onLanguageChange={handleLanguageChange}
-          mode={mode}
-          onModeChange={setMode}
           reviewedCount={reviewedCount}
-          modeDisabled={false}
+          showTabs={false}
         />
         <div className="flex flex-col items-center justify-center gap-4 py-20">
           <p className="text-lg text-muted-foreground">{error}</p>
@@ -360,10 +358,8 @@ function FlashcardsContent() {
         <Header
           language={language}
           onLanguageChange={handleLanguageChange}
-          mode={mode}
-          onModeChange={setMode}
           reviewedCount={reviewedCount}
-          modeDisabled={false}
+          showTabs={false}
         />
         <div className="flex flex-col items-center justify-center gap-4 py-20">
           <BookOpen className="size-16 text-muted-foreground" />
@@ -388,10 +384,8 @@ function FlashcardsContent() {
         <Header
           language={language}
           onLanguageChange={handleLanguageChange}
-          mode={mode}
-          onModeChange={setMode}
           reviewedCount={reviewedCount}
-          modeDisabled={false}
+          showTabs={false}
         />
         <div className="flex flex-col items-center justify-center gap-6 py-20">
           <div className="relative">
@@ -454,129 +448,167 @@ function FlashcardsContent() {
   const canQuiz = card.choices && card.choices.length >= 3;
   const capSessionTotal = sessionTotal ?? card.dueCount;
 
+  const handleModeChange = (val: string) => {
+    if (val === "quiz" && !canQuiz) return;
+    setMode(val as "rate" | "quiz");
+    setRevealed(false);
+    setSelectedAnswer(null);
+    setCorrectAnswer(null);
+  };
+
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      <Header
-        language={language}
-        onLanguageChange={handleLanguageChange}
-        mode={mode}
-        onModeChange={setMode}
-        reviewedCount={reviewedCount}
-        modeDisabled={!canQuiz}
-      />
-
-      {capSessionTotal > 0 && (
-        <div className="flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-4xl bg-muted">
-            <div
-              className="h-full rounded-4xl bg-primary transition-all duration-300"
-              style={{
-                width: `${Math.min((reviewedCount / capSessionTotal) * 100, 100)}%`,
-              }}
-            />
-          </div>
-          <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-            {capSessionTotal - reviewedCount} left
-          </span>
-        </div>
-      )}
-
-      <Flashcard
-        word={card.word}
-        meaning={card.meaning}
-        type={card.type}
-        exampleSentence={card.exampleSentence}
-        score={card.score}
-        correctCount={card.correctCount}
-        wrongCount={card.wrongCount}
-        revealed={revealed}
-        onReveal={mode === "rate" ? () => setRevealed(true) : undefined}
-        frontHint={mode === "quiz" ? "Select the correct meaning" : undefined}
-      />
-
-      {revealed && mode === "rate" && (
-        <div className="grid grid-cols-2 gap-3">
-          {GRADES.map(({ quality, label, icon: Icon, shortcut }) => (
-            <Button
-              key={quality}
-              variant={quality === 0 ? "destructive" : "outline"}
-              className={cn(
-                "h-auto flex-col gap-1 py-3 text-base font-semibold",
-                quality === 5 && "bg-green-600/15 border-green-600/50 text-green-600 hover:bg-green-600/25"
-              )}
-              onClick={() => handleGrade(quality)}
-              disabled={submitting}
-            >
-              <span className="flex items-center gap-1.5">
-                {Icon && <Icon className="size-5" />}
-                {label}
-                <kbd className="ml-1 flex size-5 items-center justify-center rounded bg-current/10 text-[10px] leading-none opacity-60">
-                  {shortcut}
-                </kbd>
-              </span>
-              <span className="text-[11px] font-normal opacity-60">
-                {getIntervalPreview(quality)}
-              </span>
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {mode === "quiz" && (
-        <div className="grid grid-cols-2 gap-3">
-          {quizOptions.map((option, i) => {
-            const isSelected = selectedAnswer === option;
-            const isCorrectAnswer = correctAnswer === option;
-            let variant: "default" | "outline" | "destructive" = "outline";
-            let extraClass = "";
-
-            if (selectedAnswer !== null) {
-              if (isCorrectAnswer) {
-                variant = "default";
-                extraClass =
-                  "border-green-600/50 text-green-600 hover:bg-green-600/10 bg-green-600/10";
-              } else if (isSelected && !isCorrectAnswer) {
-                variant = "destructive";
-              }
-            }
-
-            return (
-              <Button
-                key={i}
-                variant={variant}
-                className={cn("h-auto py-4 text-base font-semibold", extraClass)}
-                onClick={() => handleQuizSelect(option)}
-                disabled={submitting || selectedAnswer !== null}
+    <Tabs value={mode} onValueChange={handleModeChange}>
+      <div className="mx-auto max-w-lg space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="flex items-center gap-2 text-3xl font-bold">
+            <GraduationCap className="size-8 text-muted-foreground" />
+            Flashcards
+          </h1>
+          <div className="flex items-center gap-3">
+            <TabsList>
+              <TabsTrigger value="rate">Self-rate</TabsTrigger>
+              <TabsTrigger
+                value="quiz"
+                disabled={!canQuiz}
+                title={!canQuiz ? "Add more vocabulary for quiz mode" : undefined}
               >
-                <span className="flex items-center gap-2">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  {option}
-                </span>
-              </Button>
-            );
-          })}
+                Quiz
+              </TabsTrigger>
+            </TabsList>
+            <Select value={language} onValueChange={handleLanguageChange}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="english">English</SelectItem>
+                <SelectItem value="french">French</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary" className="h-auto gap-1 px-2.5 py-1">
+              <CheckCircle2 className="size-3.5 text-green-600" />
+              {reviewedCount}
+            </Badge>
+          </div>
         </div>
-      )}
-    </div>
+
+        {capSessionTotal > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-4xl bg-muted">
+              <div
+                className="h-full rounded-4xl bg-primary transition-all duration-300"
+                style={{
+                  width: `${Math.min((reviewedCount / capSessionTotal) * 100, 100)}%`,
+                }}
+              />
+            </div>
+            <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+              {capSessionTotal - reviewedCount} left
+            </span>
+          </div>
+        )}
+
+        <Flashcard
+          word={card.word}
+          meaning={card.meaning}
+          type={card.type}
+          exampleSentence={card.exampleSentence}
+          score={card.score}
+          correctCount={card.correctCount}
+          wrongCount={card.wrongCount}
+          revealed={revealed}
+          onReveal={mode === "rate" ? () => setRevealed(true) : undefined}
+          frontHint={mode === "quiz" ? "Select the correct meaning" : undefined}
+        />
+
+        <TabsContent value="rate">
+          {revealed && (
+            <div className="grid grid-cols-2 gap-3">
+              {GRADES.map(({ quality, label, icon: Icon, shortcut }) => (
+                <Button
+                  key={quality}
+                  variant={quality === 0 ? "destructive" : "outline"}
+                  className={cn(
+                    "h-auto flex-col gap-1 py-3 text-base font-semibold",
+                    quality === 5 && "bg-green-600/15 border-green-600/50 text-green-600 hover:bg-green-600/25"
+                  )}
+                  onClick={() => handleGrade(quality)}
+                  disabled={submitting}
+                >
+                  <span className="flex items-center gap-1.5">
+                    {Icon && <Icon className="size-5" />}
+                    {label}
+                    <kbd className="ml-1 flex size-5 items-center justify-center rounded bg-current/10 text-[10px] leading-none opacity-60">
+                      {shortcut}
+                    </kbd>
+                  </span>
+                  <span className="text-[11px] font-normal opacity-60">
+                    {getIntervalPreview(quality)}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="quiz">
+          <div className="grid grid-cols-2 gap-3">
+            {quizOptions.map((option, i) => {
+              const isSelected = selectedAnswer === option;
+              const isCorrectAnswer = correctAnswer === option;
+              let variant: "default" | "outline" | "destructive" = "outline";
+              let extraClass = "";
+
+              if (selectedAnswer !== null) {
+                if (isCorrectAnswer) {
+                  variant = "default";
+                  extraClass =
+                    "border-green-600/50 text-green-600 hover:bg-green-600/10 bg-green-600/10";
+                } else if (isSelected && !isCorrectAnswer) {
+                  variant = "destructive";
+                }
+              }
+
+              return (
+                <Button
+                  key={i}
+                  variant={variant}
+                  className={cn("h-auto py-4 text-base font-semibold", extraClass)}
+                  onClick={() => handleQuizSelect(option)}
+                  disabled={submitting || selectedAnswer !== null}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                      {i + 1}
+                    </span>
+                    {option}
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+        </TabsContent>
+      </div>
+    </Tabs>
   );
 }
 
 function Header({
   language,
   onLanguageChange,
+  reviewedCount,
   mode,
   onModeChange,
-  reviewedCount,
   modeDisabled,
+  showTabs = true,
 }: {
   language: string;
   onLanguageChange: (value: string | null) => void;
-  mode: "rate" | "quiz";
-  onModeChange: (mode: "rate" | "quiz") => void;
   reviewedCount: number;
-  modeDisabled: boolean;
+  mode?: "rate" | "quiz";
+  onModeChange?: (mode: "rate" | "quiz") => void;
+  modeDisabled?: boolean;
+  showTabs?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -585,24 +617,26 @@ function Header({
         Flashcards
       </h1>
       <div className="flex items-center gap-3">
-        <Tabs
-          value={mode}
-          onValueChange={(val) => {
-            if (val === "quiz" && modeDisabled) return;
-            onModeChange(val as "rate" | "quiz");
-          }}
-        >
-          <TabsList>
-            <TabsTrigger value="rate">Self-rate</TabsTrigger>
-            <TabsTrigger
-              value="quiz"
-              disabled={modeDisabled}
-              title={modeDisabled ? "Add more vocabulary for quiz mode" : undefined}
-            >
-              Quiz
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {showTabs && mode && onModeChange && (
+          <Tabs
+            value={mode}
+            onValueChange={(val) => {
+              if (val === "quiz" && modeDisabled) return;
+              onModeChange(val as "rate" | "quiz");
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="rate">Self-rate</TabsTrigger>
+              <TabsTrigger
+                value="quiz"
+                disabled={modeDisabled}
+                title={modeDisabled ? "Add more vocabulary for quiz mode" : undefined}
+              >
+                Quiz
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
         <Select value={language} onValueChange={onLanguageChange}>
           <SelectTrigger className="w-28">
             <SelectValue placeholder="Language" />

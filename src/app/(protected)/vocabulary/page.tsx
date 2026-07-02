@@ -21,7 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -468,11 +474,7 @@ function VocabularyFormFields({
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-type`}>Type</Label>
-          <Select
-            value={type}
-            onValueChange={(v) => setType(v ?? "")}
-            required
-          >
+          <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
             <SelectTrigger id={`${idPrefix}-type`} className="w-full">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
@@ -1166,47 +1168,42 @@ export default function VocabularyPage() {
         ) : (
           items.map((item) => (
             <Card key={item.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
-                      {item.type}
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {categoryLabel(item.category)}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {levelLabel(item.level)}
-                    </Badge>
-                    <span className="inline-flex h-5 items-center rounded-full bg-blue-500/10 px-2 text-xs font-medium text-blue-600">
-                      Score: {item.score}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      variant="outline"
-                      size="icon-lg"
-                      onClick={() => setEditItem(item)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <DeleteButton
-                      size="icon-lg"
-                      item={item}
-                      onDelete={handleDelete}
-                      setDeleteId={setDeleteId}
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 space-y-1">
-                  <p className="font-bold text-foreground text-xl">
-                    {item.word}
-                  </p>
-                  <p className="text-muted-foreground text-xl">
-                    {item.meaning}
-                  </p>
-                </div>
+              <CardHeader className="flex items-center gap-2">
+                <span className="inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
+                  {item.type}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {categoryLabel(item.category)}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {levelLabel(item.level)}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30"
+                >
+                  Score: {item.score}
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                <p className="font-bold text-foreground text-xl">{item.word}</p>
+                <p className="text-muted-foreground text-xl">{item.meaning}</p>
               </CardContent>
+              <CardFooter className="justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => setEditItem(item)}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+                <DeleteButton
+                  size="icon-sm"
+                  item={item}
+                  onDelete={handleDelete}
+                  setDeleteId={setDeleteId}
+                />
+              </CardFooter>
             </Card>
           ))
         )}
