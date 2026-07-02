@@ -20,6 +20,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { dayKey, currentStreak } from "@/lib/vocab";
+import { WeeklyCheckInCard } from "@/components/WeeklyCheckInCard";
 
 interface Stats {
   totalStudied: number;
@@ -63,22 +64,6 @@ export default function StatisticsPage() {
 
   const streak = currentStreak(stats.reviewDates);
 
-  const activeDays = new Set(stats.reviewDates.map((s) => dayKey(new Date(s))));
-
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + mondayOffset);
-
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
-
-  const labels = ["M", "T", "W", "T", "F", "S", "S"];
-
   const chartData = buildChartData(stats.reviewDates, 14);
   const chartConfig = {
     reviews: { label: "Reviews", color: "var(--primary)" },
@@ -88,40 +73,7 @@ export default function StatisticsPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Statistics</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground">
-            This Week
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2 justify-center">
-            {weekDays.map((d, i) => {
-              const key = dayKey(d);
-              const filled = activeDays.has(key);
-              const isToday = dayKey(d) === dayKey(today);
-              return (
-                <div key={i} className="flex flex-col items-center gap-1">
-                  <div
-                    className={
-                      `size-9 rounded-full flex items-center justify-center text-sm font-medium ` +
-                      (filled
-                        ? "bg-orange-500 text-white"
-                        : "bg-muted text-muted-foreground") +
-                      (isToday ? " ring-2 ring-orange-500" : "")
-                    }
-                  >
-                    {filled ? <CheckCircle2 className="size-5" /> : labels[i]}
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {labels[i]}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      <WeeklyCheckInCard reviewDates={stats.reviewDates} />
 
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
         <Card>

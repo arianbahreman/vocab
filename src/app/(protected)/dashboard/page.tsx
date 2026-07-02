@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BookOpen,
   Languages,
-  GraduationCap,
   AlertCircle,
   Clock,
   Flame,
   Plus,
   Play,
 } from "lucide-react";
+import { WeeklyCheckInCard } from "@/components/WeeklyCheckInCard";
 
 interface DashboardData {
   total: number;
@@ -21,6 +21,7 @@ interface DashboardData {
   lowScore: number;
   due: number;
   streak: number;
+  reviewDates: string[];
 }
 
 export default function DashboardPage() {
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Dashboard</h1>
+      <WeeklyCheckInCard reviewDates={data?.reviewDates ?? []} />
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">

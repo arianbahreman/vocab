@@ -30,9 +30,10 @@ export async function GET(request: Request) {
       .eq("vocabulary.user_id", user.id)
       .gte("reviewed_at", since)
 
-    const streak = currentStreak((reviews ?? []).map((r) => r.reviewed_at))
+    const reviewDates = (reviews ?? []).map((r) => r.reviewed_at)
+    const streak = currentStreak(reviewDates)
 
-    return NextResponse.json({ total, english, french, lowScore, due, streak })
+    return NextResponse.json({ total, english, french, lowScore, due, streak, reviewDates })
   }
 
   const search = searchParams.get("search") || ""
