@@ -37,13 +37,16 @@ function mapCard(card: DueCard, choices: string[], dueCount: number) {
   }
 }
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]]
+function dedupeChoices(meanings: string[], count = 3): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const m of meanings) {
+    if (!m || seen.has(m)) continue
+    seen.add(m)
+    out.push(m)
+    if (out.length >= count) break
   }
-  return a
+  return out
 }
 
 export async function GET(request: NextRequest) {
@@ -105,27 +108,17 @@ export async function GET(request: NextRequest) {
   const { data: due } = await dueQuery
 
   if (due && due.length > 0) {
-    const dueIds = due.map((c) => c.id)
-
-    let distractorQuery = supabase
-      .from("vocabulary")
-      .select("meaning")
-      .eq("user_id", user.id)
-      .not("id", "in", `(${dueIds.join(",")})`)
-      .limit(Math.min(limit * 12, 48))
-
-    if (filterLanguage) distractorQuery = distractorQuery.eq("language", filterLanguage)
-
-    const { data: distractors } = await distractorQuery
-    const pool = (distractors || [])
-      .map((d) => d.meaning)
-      .filter((m): m is string => !!m)
-
-    const cards = due.map((card) => {
-      const available = pool.filter((m) => m !== card.meaning)
-      const shuffled = shuffle(available)
-      return mapCard(card, shuffled.slice(0, 3), dueCount ?? 0)
-    })
+    const cards = await Promise.all(
+      due.map(async (card) => {
+        const { data: rows } = await supabase.rpc("get_random_quiz_choices", {
+          p_exclude_id: card.id,
+          p_language: filterLanguage,
+          p_limit: 12,
+        })
+        const meanings = (rows || []).map((r: { meaning: string }) => r.meaning)
+        return mapCard(card, dedupeChoices(meanings), dueCount ?? 0)
+      })
+    )
 
     return NextResponse.json({ cards, dueCount: dueCount ?? 0 })
   }
