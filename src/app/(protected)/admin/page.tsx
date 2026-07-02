@@ -54,7 +54,6 @@ import {
   ChevronRight,
   CheckCircle2,
   XCircle,
-  TrendingUp,
 } from "lucide-react"
 import {
   Bar,
@@ -921,21 +920,37 @@ function UserDetail({ user }: { user: AdminUser }) {
         </div>
       </div>
 
-      <div className="flex gap-4 text-sm">
-        <div className="flex items-center gap-1.5 text-green-600">
-          <CheckCircle2 className="size-4" />
-          <span className="tabular-nums">{user.correctAnswers} correct</span>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CheckCircle2 className="size-4 text-green-600" />
+            Correct
+          </p>
+          <p className="text-xl font-bold text-green-600">{user.correctAnswers}</p>
         </div>
-        <div className="flex items-center gap-1.5 text-destructive">
-          <XCircle className="size-4" />
-          <span className="tabular-nums">{user.wrongAnswers} wrong</span>
+        <div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <XCircle className="size-4 text-destructive" />
+            Wrong
+          </p>
+          <p className="text-xl font-bold text-destructive">{user.wrongAnswers}</p>
         </div>
-        {totalAttempts > 0 && (
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <TrendingUp className="size-4" />
-            <span className="tabular-nums">{user.accuracy}% accuracy</span>
-          </div>
-        )}
+        <div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Target className="size-4" />
+            Accuracy
+          </p>
+          <p className="text-xl font-bold">{user.accuracy}%</p>
+        </div>
+        <div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Flame className="size-4 text-orange-500" />
+            Streak
+          </p>
+          <p className="text-xl font-bold">
+            {user.streak} day{user.streak !== 1 ? "s" : ""}
+          </p>
+        </div>
       </div>
 
       {chartData.some((d) => d.count > 0) && (
