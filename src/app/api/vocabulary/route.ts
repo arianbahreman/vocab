@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { currentStreak } from "@/lib/vocab"
-import { defaultFields, type VocabType } from "@/lib/vocab-types"
+import { defaultFields, type VocabType, type VocabFields } from "@/lib/vocab-types"
 
 interface ImportItem {
   type: string
@@ -12,8 +12,7 @@ interface ImportItem {
   category?: string
   level?: string
   frequency_rank?: number | null
-  plural?: string
-  gender?: string
+  fields?: VocabFields
 }
 
 const VALID_TYPES = ["noun", "verb", "adjective", "sentence", "phrase"]
@@ -135,9 +134,7 @@ export async function POST(request: Request) {
 
     const rows = body.items.map((item: ImportItem) => {
       const t = coerceType(item.type)
-      const fields = defaultFields(t)
-      if (t === "noun" && item.plural) (fields as any).plural = item.plural
-      if (t === "noun" && item.gender) (fields as any).gender = item.gender
+      const fields = item.fields ?? defaultFields(t)
       return {
         user_id: user.id,
         language: body.language,

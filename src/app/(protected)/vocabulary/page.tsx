@@ -94,6 +94,7 @@ interface CsvRow {
   category: string;
   level: string;
   frequency_rank: number | null;
+  fields?: string;
 }
 
 interface VocabTableRow {
@@ -161,7 +162,7 @@ function escapeCsv(value: string): string {
 
 function generateCsv(items: VocabTableRow[]): string {
   const header =
-    "language,type,word,meaning,example_sentence,category,level,frequency_rank,notes";
+    "language,type,word,meaning,example_sentence,category,level,frequency_rank,notes,fields";
   const rows = items.map((item) =>
     [
       escapeCsv(item.language),
@@ -173,6 +174,7 @@ function generateCsv(items: VocabTableRow[]): string {
       escapeCsv(item.level),
       item.frequency_rank != null ? String(item.frequency_rank) : "",
       escapeCsv(item.notes ?? ""),
+      escapeCsv(JSON.stringify(item.fields ?? {})),
     ].join(","),
   );
   return [header, ...rows].join("\n");
@@ -196,6 +198,7 @@ function parseCsv(text: string): CsvRow[] {
   const categoryIdx = cols.indexOf("category");
   const levelIdx = cols.indexOf("level");
   const freqIdx = cols.indexOf("frequency_rank");
+  const fieldsIdx = cols.indexOf("fields");
 
   if (typeIdx === -1 || wordIdx === -1 || meaningIdx === -1) {
     throw new Error('CSV must have "type", "word", and "meaning" columns');
@@ -223,10 +226,11 @@ function parseCsv(text: string): CsvRow[] {
     const level = levelIdx !== -1 ? (values[levelIdx] ?? "") : "";
     const freqRaw = freqIdx !== -1 ? values[freqIdx] : "";
     const frequency_rank = freqRaw ? parseInt(freqRaw, 10) : null;
+    const fieldsRaw = fieldsIdx !== -1 ? values[fieldsIdx] : "";
 
     if (!type || !word || !meaning) continue;
 
-    results.push({
+    const row: CsvRow = {
       type,
       word,
       meaning,
@@ -235,7 +239,13 @@ function parseCsv(text: string): CsvRow[] {
       category,
       level,
       frequency_rank: Number.isNaN(frequency_rank) ? null : frequency_rank,
-    });
+    };
+
+    if (fieldsRaw) {
+      try { row.fields = JSON.parse(fieldsRaw) } catch { /* ignore invalid JSON */ }
+    }
+
+    results.push(row);
   }
 
   return results;
@@ -425,16 +435,17 @@ function ImportModal({
             />
             <p className="text-xs text-muted-foreground">
               CSV must have columns: type, word, meaning. Optional:
-              example_sentence, category, level, frequency_rank, note
+              example_sentence, category, level, frequency_rank, note, fields
+              (type-specific fields as JSON)
             </p>
             <div className="rounded-lg border bg-muted/50 p-2 font-mono text-[0.375rem] leading-snug break-all">
               <p className="font-medium text-foreground">Example:</p>
               <p>
-                type,word,meaning,example_sentence,category,level,frequency_rank
+                type,word,meaning,example_sentence,category,level,frequency_rank,fields
               </p>
               <p>
-                noun,hello,سلام,&quot;Hello, how are
-                you?&quot;,people_relationships,elementary,100
+                noun,hello,سلام,&quot;Hello, how are you?&quot;,people_relationships,elementary,100,&quot;
+                {'{"'}plural&quot;:&quot;hellos&quot;,&quot;gender&quot;:&quot;masculine&quot;{'}&quot;'}
               </p>
             </div>
           </div>
