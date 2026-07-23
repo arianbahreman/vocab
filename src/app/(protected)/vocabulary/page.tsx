@@ -629,9 +629,9 @@ function VerbFieldsForm({
 
       {/* Conjugation tables */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <TenseSection label="Present" tense={fields.present} setTense={(t) => set({ present: t })} />
-        <TenseSection label="Past" tense={fields.past} setTense={(t) => set({ past: t })} />
-        <TenseSection label="Future" tense={fields.future} setTense={(t) => set({ future: t })} />
+        <TenseSection label="Present" tense={fields.present ?? {}} setTense={(t) => set({ present: t })} />
+        <TenseSection label="Past" tense={fields.past ?? {}} setTense={(t) => set({ past: t })} />
+        <TenseSection label="Future" tense={fields.future ?? {}} setTense={(t) => set({ future: t })} />
       </div>
 
       {/* Participles */}
