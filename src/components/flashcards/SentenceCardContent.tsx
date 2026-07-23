@@ -16,6 +16,11 @@ export function SentenceCardBack({ meaning, fields }: { meaning: string; fields:
   return (
     <div className="flex flex-col items-center gap-3 p-4 text-center">
       <p className="text-2xl font-semibold">{meaning}</p>
+      {fields.literal_translation && (
+        <p className="max-w-md text-sm italic text-muted-foreground">
+          Literally: {fields.literal_translation}
+        </p>
+      )}
       {fields.word_by_word && fields.word_by_word.length > 0 && (
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
           {fields.word_by_word.map((w, i) => (

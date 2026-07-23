@@ -475,42 +475,54 @@ function NounFieldsForm({
 }) {
   const set = (partial: Partial<NounFields>) => onChange({ ...fields, ...partial });
   return (
-    <div className="grid grid-cols-3 gap-3 rounded-lg border p-3">
-      <p className="col-span-full text-xs font-medium text-muted-foreground uppercase tracking-wide">
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Noun Details
       </p>
-      <div className="space-y-1">
-        <Label className="text-xs">Plural</Label>
-        <Input
-          value={fields.plural ?? ""}
-          onChange={(e) => set({ plural: e.target.value || undefined })}
-          placeholder="e.g. cats"
-        />
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Plural Form</Label>
+          <Input
+            value={fields.plural ?? ""}
+            onChange={(e) => set({ plural: e.target.value || undefined })}
+            placeholder="e.g. cats"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Article</Label>
+          <Input
+            value={fields.article ?? ""}
+            onChange={(e) => set({ article: e.target.value || undefined })}
+            placeholder="e.g. der, le, the"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Gender</Label>
+          <Select
+            value={fields.gender ?? "none"}
+            onValueChange={(v) => set({ gender: v === "none" ? undefined : v as NounFields["gender"] })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="masculine">Masculine</SelectItem>
+              <SelectItem value="feminine">Feminine</SelectItem>
+              <SelectItem value="neuter">Neuter</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Gender</Label>
-        <Select
-          value={fields.gender ?? "none"}
-          onValueChange={(v) => set({ gender: v === "none" ? undefined : v as NounFields["gender"] })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="masculine">Masculine</SelectItem>
-            <SelectItem value="feminine">Feminine</SelectItem>
-            <SelectItem value="neuter">Neuter</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Article</Label>
-        <Input
-          value={fields.article ?? ""}
-          onChange={(e) => set({ article: e.target.value || undefined })}
-          placeholder="e.g. der, le, the"
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="noun-countable"
+          checked={fields.countable ?? true}
+          onChange={(e) => set({ countable: e.target.checked })}
+          className="size-4"
         />
+        <Label htmlFor="noun-countable" className="text-xs">Countable</Label>
       </div>
     </div>
   );
@@ -525,8 +537,11 @@ function VerbFieldsForm({
 }) {
   const set = (partial: Partial<VerbFields>) => onChange({ ...fields, ...partial });
 
-  const tenseLabels = ["i", "you_sg", "he_she_it", "we", "you_pl", "they"] as const;
-  const tenseHeaders = ["I", "You (sg)", "He/She/It", "We", "You (pl)", "They"];
+  const tenseKeys = ["i", "you_sg", "he_she_it", "we", "you_pl", "they"] as const;
+  const tenseLabels: Record<string, string> = {
+    i: "I", you_sg: "you (sg)", he_she_it: "he/she/it",
+    we: "we", you_pl: "you (pl)", they: "they",
+  };
 
   function TenseSection({
     label,
@@ -538,14 +553,14 @@ function VerbFieldsForm({
     setTense: (t: VerbFields["present"]) => void;
   }) {
     return (
-      <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground uppercase">{label}</p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {tenseLabels.map((key, i) => (
+      <div className="space-y-1 rounded-lg border p-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase text-center">{label}</p>
+        <div className="space-y-1">
+          {tenseKeys.map((key) => (
             <div key={key} className="grid grid-cols-[3.5rem_1fr] items-center gap-1">
-              <span className="text-xs text-muted-foreground">{tenseHeaders[i]}</span>
+              <span className="text-[11px] text-muted-foreground text-right">{tenseLabels[key]}</span>
               <Input
-                className="h-7 text-xs"
+                className="h-6 text-[11px]"
                 value={tense[key] ?? ""}
                 onChange={(e) =>
                   setTense({ ...tense, [key]: e.target.value || undefined })
@@ -564,38 +579,41 @@ function VerbFieldsForm({
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Verb Details
       </p>
-      <div className="flex flex-wrap gap-3">
+
+      {/* Properties row */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
-          <Label className="text-xs">Regular</Label>
           <input
             type="checkbox"
+            id="verb-regular"
             checked={fields.is_regular}
             onChange={(e) => set({ is_regular: e.target.checked })}
             className="size-4"
           />
+          <Label htmlFor="verb-regular" className="text-xs">Regular</Label>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Auxiliary Verb</Label>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Auxiliary</Label>
           <Input
-            className="h-7 w-28 text-xs"
+            className="h-7 w-24 text-xs"
             value={fields.auxiliary_verb ?? ""}
             onChange={(e) => set({ auxiliary_verb: e.target.value || undefined })}
-            placeholder="e.g. avoir"
+            placeholder="avoir/être"
           />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Reflexive Pronoun</Label>
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Reflexive pronoun</Label>
           <Input
-            className="h-7 w-28 text-xs"
+            className="h-7 w-20 text-xs"
             value={fields.reflexive_pronoun ?? ""}
             onChange={(e) => set({ reflexive_pronoun: e.target.value || undefined })}
-            placeholder="e.g. se"
+            placeholder="se"
           />
         </div>
-        <div className="space-y-1">
+        <div className="flex items-center gap-2">
           <Label className="text-xs">Prepositions</Label>
           <Input
-            className="h-7 w-40 text-xs"
+            className="h-7 w-32 text-xs"
             value={fields.prepositions?.join(", ") ?? ""}
             onChange={(e) =>
               set({
@@ -608,11 +626,15 @@ function VerbFieldsForm({
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+      {/* Conjugation tables */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <TenseSection label="Present" tense={fields.present} setTense={(t) => set({ present: t })} />
         <TenseSection label="Past" tense={fields.past} setTense={(t) => set({ past: t })} />
         <TenseSection label="Future" tense={fields.future} setTense={(t) => set({ future: t })} />
       </div>
+
+      {/* Participles */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Past Participle</Label>
@@ -620,6 +642,7 @@ function VerbFieldsForm({
             className="h-7 text-xs"
             value={fields.past_participle ?? ""}
             onChange={(e) => set({ past_participle: e.target.value || undefined })}
+            placeholder="e.g. walked, been"
           />
         </div>
         <div className="space-y-1">
@@ -628,6 +651,7 @@ function VerbFieldsForm({
             className="h-7 text-xs"
             value={fields.present_participle ?? ""}
             onChange={(e) => set({ present_participle: e.target.value || undefined })}
+            placeholder="e.g. walking, being"
           />
         </div>
       </div>
@@ -644,53 +668,75 @@ function AdjectiveFieldsForm({
 }) {
   const set = (partial: Partial<AdjectiveFields>) => onChange({ ...fields, ...partial });
   return (
-    <div className="grid grid-cols-3 gap-3 rounded-lg border p-3">
-      <p className="col-span-full text-xs font-medium text-muted-foreground uppercase tracking-wide">
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Adjective Details
       </p>
-      <div className="space-y-1">
-        <Label className="text-xs">Comparative</Label>
-        <Input
-          value={fields.comparative ?? ""}
-          onChange={(e) => set({ comparative: e.target.value || undefined })}
-          placeholder="e.g. taller"
-        />
+
+      {/* Comparison */}
+      <div>
+        <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">Comparison</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Comparative</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.comparative ?? ""}
+              onChange={(e) => set({ comparative: e.target.value || undefined })}
+              placeholder="e.g. taller, more beautiful"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Superlative</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.superlative ?? ""}
+              onChange={(e) => set({ superlative: e.target.value || undefined })}
+              placeholder="e.g. tallest, most beautiful"
+            />
+          </div>
+        </div>
       </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Superlative</Label>
-        <Input
-          value={fields.superlative ?? ""}
-          onChange={(e) => set({ superlative: e.target.value || undefined })}
-          placeholder="e.g. tallest"
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Plural Form</Label>
-        <Input
-          value={fields.plural_form ?? ""}
-          onChange={(e) => set({ plural_form: e.target.value || undefined })}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Masculine</Label>
-        <Input
-          value={fields.masculine_form ?? ""}
-          onChange={(e) => set({ masculine_form: e.target.value || undefined })}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Feminine</Label>
-        <Input
-          value={fields.feminine_form ?? ""}
-          onChange={(e) => set({ feminine_form: e.target.value || undefined })}
-        />
-      </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Neuter</Label>
-        <Input
-          value={fields.neuter_form ?? ""}
-          onChange={(e) => set({ neuter_form: e.target.value || undefined })}
-        />
+
+      {/* Gender agreement */}
+      <div>
+        <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">Gender &amp; Number Agreement</p>
+        <div className="grid grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Masculine</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.masculine_form ?? ""}
+              onChange={(e) => set({ masculine_form: e.target.value || undefined })}
+              placeholder="e.g. beau"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Feminine</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.feminine_form ?? ""}
+              onChange={(e) => set({ feminine_form: e.target.value || undefined })}
+              placeholder="e.g. belle"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Neuter</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.neuter_form ?? ""}
+              onChange={(e) => set({ neuter_form: e.target.value || undefined })}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Plural</Label>
+            <Input
+              className="h-7 text-xs"
+              value={fields.plural_form ?? ""}
+              onChange={(e) => set({ plural_form: e.target.value || undefined })}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -726,6 +772,35 @@ function SentenceFieldsForm({
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
         Sentence Details
       </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Literal Translation</Label>
+          <Input
+            className="h-7 text-xs"
+            value={fields.literal_translation ?? ""}
+            onChange={(e) => set({ literal_translation: e.target.value || undefined })}
+            placeholder="Word-for-word translation"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Register</Label>
+          <Select
+            value={fields.register ?? "neutral"}
+            onValueChange={(v) => set({ register: v as SentenceFields["register"] })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="formal">Formal</SelectItem>
+              <SelectItem value="informal">Informal</SelectItem>
+              <SelectItem value="neutral">Neutral</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="space-y-1">
         <Label className="text-xs">Context</Label>
         <Textarea
@@ -735,22 +810,7 @@ function SentenceFieldsForm({
           placeholder="When is this sentence used?"
         />
       </div>
-      <div className="space-y-1">
-        <Label className="text-xs">Register</Label>
-        <Select
-          value={fields.register ?? "neutral"}
-          onValueChange={(v) => set({ register: v as SentenceFields["register"] })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="formal">Formal</SelectItem>
-            <SelectItem value="informal">Informal</SelectItem>
-            <SelectItem value="neutral">Neutral</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <Label className="text-xs">Word-by-word breakdown</Label>

@@ -89,6 +89,7 @@ export interface SentenceFields {
   word_by_word?: { word: string; translation: string }[]
   context?: string
   register?: "formal" | "informal" | "neutral"
+  literal_translation?: string
 }
 
 // ─── Phrase ──────────────────────────────────────────────────────
