@@ -1,11 +1,19 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, BookOpen } from "lucide-react";
+import type { VocabFields, VocabType } from "@/lib/vocab-types";
+import { isNounFields, isVerbFields, isAdjectiveFields, isSentenceFields, isPhraseFields, typeLabel } from "@/lib/vocab-types";
+import { NounCardFront, NounCardBack } from "./NounCardContent";
+import { VerbCardFront, VerbCardBack } from "./VerbCardContent";
+import { AdjectiveCardFront, AdjectiveCardBack } from "./AdjectiveCardContent";
+import { SentenceCardFront, SentenceCardBack } from "./SentenceCardContent";
+import { PhraseCardFront, PhraseCardBack } from "./PhraseCardContent";
 
 export interface FlashcardProps {
   word: string;
   meaning: string;
-  type?: string | null;
+  type?: VocabType | string | null;
+  fields?: VocabFields;
   exampleSentence?: string | null;
   score?: number;
   correctCount?: number;
@@ -15,10 +23,64 @@ export interface FlashcardProps {
   frontHint?: string;
 }
 
+function FrontFace({ word, type, fields }: { word: string; type?: VocabType | string | null; fields?: VocabFields }) {
+  if (type === "noun" && fields && isNounFields(fields)) {
+    return <NounCardFront word={word} fields={fields} />;
+  }
+  if (type === "verb" && fields && isVerbFields(fields)) {
+    return <VerbCardFront word={word} fields={fields} />;
+  }
+  if (type === "adjective" && fields && isAdjectiveFields(fields)) {
+    return <AdjectiveCardFront word={word} fields={fields} />;
+  }
+  if (type === "sentence" && fields && isSentenceFields(fields)) {
+    return <SentenceCardFront word={word} fields={fields} />;
+  }
+  if (type === "phrase" && fields && isPhraseFields(fields)) {
+    return <PhraseCardFront word={word} fields={fields} />;
+  }
+  return <p className="text-4xl font-bold leading-tight">{word}</p>;
+}
+
+function BackFace({ meaning, type, fields, exampleSentence }: {
+  meaning: string;
+  type?: VocabType | string | null;
+  fields?: VocabFields;
+  exampleSentence?: string | null;
+}) {
+  const typeSpecific = (
+    <>
+      {type === "noun" && fields && isNounFields(fields) && <NounCardBack meaning={meaning} fields={fields} />}
+      {type === "verb" && fields && isVerbFields(fields) && <VerbCardBack meaning={meaning} fields={fields} />}
+      {type === "adjective" && fields && isAdjectiveFields(fields) && <AdjectiveCardBack meaning={meaning} fields={fields} />}
+      {type === "sentence" && fields && isSentenceFields(fields) && <SentenceCardBack meaning={meaning} fields={fields} />}
+      {type === "phrase" && fields && isPhraseFields(fields) && <PhraseCardBack meaning={meaning} fields={fields} />}
+    </>
+  );
+
+  const fallback = (
+    <div className="flex flex-col items-center gap-3">
+      <p className="text-2xl font-semibold">{meaning}</p>
+      {exampleSentence && (
+        <p className="max-w-md text-sm italic text-muted-foreground">
+          &ldquo;{exampleSentence}&rdquo;
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+      {typeSpecific || fallback}
+    </div>
+  );
+}
+
 export function Flashcard({
   word,
   meaning,
   type,
+  fields,
   exampleSentence,
   score,
   correctCount,
@@ -43,10 +105,10 @@ export function Flashcard({
         <div className="flashcard-front flashcard-backface-hidden absolute inset-0 flex flex-col items-center justify-center rounded-xl p-6 text-center">
           {type && (
             <Badge variant="secondary" className="mb-3">
-              {type}
+              {typeLabel(type)}
             </Badge>
           )}
-          <p className="text-4xl font-bold leading-tight">{word}</p>
+          <FrontFace word={word} type={type} fields={fields} />
           <p className="mt-4 text-sm text-muted-foreground">
             {frontHint ?? (
               <>
@@ -62,14 +124,12 @@ export function Flashcard({
 
         {/* Back face */}
         <div className="flashcard-back flashcard-backface-hidden flashcard-rotate-180 absolute inset-0 flex flex-col rounded-xl ring-1 ring-foreground/10">
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-            <p className="text-2xl font-semibold">{meaning}</p>
-            {exampleSentence && (
-              <p className="max-w-md text-sm italic text-muted-foreground">
-                &ldquo;{exampleSentence}&rdquo;
-              </p>
-            )}
-          </div>
+          <BackFace
+            meaning={meaning}
+            type={type}
+            fields={fields}
+            exampleSentence={exampleSentence}
+          />
 
           {(typeof correctCount === "number" ||
             typeof wrongCount === "number" ||

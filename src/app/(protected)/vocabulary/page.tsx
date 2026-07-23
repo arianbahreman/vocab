@@ -56,8 +56,19 @@ import {
   WORD_LEVELS,
   categoryLabel,
   levelLabel,
-  type VocabularyItem,
+  typeLabel,
+  defaultFields,
 } from "@/lib/vocab";
+import type {
+  VocabType,
+  VocabFields,
+  NounFields,
+  VerbFields,
+  AdjectiveFields,
+  SentenceFields,
+  PhraseFields,
+} from "@/lib/vocab-types";
+import { isNounFields, isVerbFields, isAdjectiveFields, isSentenceFields, isPhraseFields } from "@/lib/vocab-types";
 import {
   ChartContainer,
   ChartTooltip,
@@ -85,13 +96,28 @@ interface CsvRow {
   frequency_rank: number | null;
 }
 
+interface VocabTableRow {
+  id: string
+  language: string
+  type: string
+  word: string
+  meaning: string
+  example_sentence: string
+  category: string
+  level: string
+  frequency_rank: number | null
+  notes: string
+  fields: VocabFields
+  score: number
+}
+
 function DeleteButton({
   item,
   onDelete,
   setDeleteId,
   size = "icon-sm",
 }: {
-  item: VocabularyItem;
+  item: VocabTableRow;
   onDelete: () => void;
   setDeleteId: (id: string | null) => void;
   size?: "icon-sm" | "icon-lg";
@@ -133,7 +159,7 @@ function escapeCsv(value: string): string {
   return value;
 }
 
-function generateCsv(items: VocabularyItem[]): string {
+function generateCsv(items: VocabTableRow[]): string {
   const header =
     "language,type,word,meaning,example_sentence,category,level,frequency_rank,notes";
   const rows = items.map((item) =>
@@ -427,55 +453,467 @@ function ImportModal({
   );
 }
 
+// ─── Type-specific form sections ────────────────────────────────
+
+function NounFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: NounFields;
+  onChange: (f: NounFields) => void;
+}) {
+  const set = (partial: Partial<NounFields>) => onChange({ ...fields, ...partial });
+  return (
+    <div className="grid grid-cols-3 gap-3 rounded-lg border p-3">
+      <p className="col-span-full text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Noun Details
+      </p>
+      <div className="space-y-1">
+        <Label className="text-xs">Plural</Label>
+        <Input
+          value={fields.plural ?? ""}
+          onChange={(e) => set({ plural: e.target.value || undefined })}
+          placeholder="e.g. cats"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Gender</Label>
+        <Select
+          value={fields.gender ?? "none"}
+          onValueChange={(v) => set({ gender: v === "none" ? undefined : v as NounFields["gender"] })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            <SelectItem value="masculine">Masculine</SelectItem>
+            <SelectItem value="feminine">Feminine</SelectItem>
+            <SelectItem value="neuter">Neuter</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Article</Label>
+        <Input
+          value={fields.article ?? ""}
+          onChange={(e) => set({ article: e.target.value || undefined })}
+          placeholder="e.g. der, le, the"
+        />
+      </div>
+    </div>
+  );
+}
+
+function VerbFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: VerbFields;
+  onChange: (f: VerbFields) => void;
+}) {
+  const set = (partial: Partial<VerbFields>) => onChange({ ...fields, ...partial });
+
+  const tenseLabels = ["i", "you_sg", "he_she_it", "we", "you_pl", "they"] as const;
+  const tenseHeaders = ["I", "You (sg)", "He/She/It", "We", "You (pl)", "They"];
+
+  function TenseSection({
+    label,
+    tense,
+    setTense,
+  }: {
+    label: string;
+    tense: VerbFields["present"];
+    setTense: (t: VerbFields["present"]) => void;
+  }) {
+    return (
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground uppercase">{label}</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {tenseLabels.map((key, i) => (
+            <div key={key} className="grid grid-cols-[3.5rem_1fr] items-center gap-1">
+              <span className="text-xs text-muted-foreground">{tenseHeaders[i]}</span>
+              <Input
+                className="h-7 text-xs"
+                value={tense[key] ?? ""}
+                onChange={(e) =>
+                  setTense({ ...tense, [key]: e.target.value || undefined })
+                }
+                placeholder="—"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Verb Details
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs">Regular</Label>
+          <input
+            type="checkbox"
+            checked={fields.is_regular}
+            onChange={(e) => set({ is_regular: e.target.checked })}
+            className="size-4"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Auxiliary Verb</Label>
+          <Input
+            className="h-7 w-28 text-xs"
+            value={fields.auxiliary_verb ?? ""}
+            onChange={(e) => set({ auxiliary_verb: e.target.value || undefined })}
+            placeholder="e.g. avoir"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Reflexive Pronoun</Label>
+          <Input
+            className="h-7 w-28 text-xs"
+            value={fields.reflexive_pronoun ?? ""}
+            onChange={(e) => set({ reflexive_pronoun: e.target.value || undefined })}
+            placeholder="e.g. se"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Prepositions</Label>
+          <Input
+            className="h-7 w-40 text-xs"
+            value={fields.prepositions?.join(", ") ?? ""}
+            onChange={(e) =>
+              set({
+                prepositions: e.target.value
+                  ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean)
+                  : undefined,
+              })
+            }
+            placeholder="à, de, avec"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <TenseSection label="Present" tense={fields.present} setTense={(t) => set({ present: t })} />
+        <TenseSection label="Past" tense={fields.past} setTense={(t) => set({ past: t })} />
+        <TenseSection label="Future" tense={fields.future} setTense={(t) => set({ future: t })} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Past Participle</Label>
+          <Input
+            className="h-7 text-xs"
+            value={fields.past_participle ?? ""}
+            onChange={(e) => set({ past_participle: e.target.value || undefined })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Present Participle</Label>
+          <Input
+            className="h-7 text-xs"
+            value={fields.present_participle ?? ""}
+            onChange={(e) => set({ present_participle: e.target.value || undefined })}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdjectiveFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: AdjectiveFields;
+  onChange: (f: AdjectiveFields) => void;
+}) {
+  const set = (partial: Partial<AdjectiveFields>) => onChange({ ...fields, ...partial });
+  return (
+    <div className="grid grid-cols-3 gap-3 rounded-lg border p-3">
+      <p className="col-span-full text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Adjective Details
+      </p>
+      <div className="space-y-1">
+        <Label className="text-xs">Comparative</Label>
+        <Input
+          value={fields.comparative ?? ""}
+          onChange={(e) => set({ comparative: e.target.value || undefined })}
+          placeholder="e.g. taller"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Superlative</Label>
+        <Input
+          value={fields.superlative ?? ""}
+          onChange={(e) => set({ superlative: e.target.value || undefined })}
+          placeholder="e.g. tallest"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Plural Form</Label>
+        <Input
+          value={fields.plural_form ?? ""}
+          onChange={(e) => set({ plural_form: e.target.value || undefined })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Masculine</Label>
+        <Input
+          value={fields.masculine_form ?? ""}
+          onChange={(e) => set({ masculine_form: e.target.value || undefined })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Feminine</Label>
+        <Input
+          value={fields.feminine_form ?? ""}
+          onChange={(e) => set({ feminine_form: e.target.value || undefined })}
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Neuter</Label>
+        <Input
+          value={fields.neuter_form ?? ""}
+          onChange={(e) => set({ neuter_form: e.target.value || undefined })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SentenceFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: SentenceFields;
+  onChange: (f: SentenceFields) => void;
+}) {
+  const set = (partial: Partial<SentenceFields>) => onChange({ ...fields, ...partial });
+
+  const addWord = () => {
+    const wbw = fields.word_by_word ?? [];
+    set({ word_by_word: [...wbw, { word: "", translation: "" }] });
+  };
+
+  const updateWord = (i: number, part: Partial<{ word: string; translation: string }>) => {
+    const wbw = [...(fields.word_by_word ?? [])];
+    wbw[i] = { ...wbw[i], ...part };
+    set({ word_by_word: wbw });
+  };
+
+  const removeWord = (i: number) => {
+    const wbw = fields.word_by_word?.filter((_, idx) => idx !== i);
+    set({ word_by_word: wbw?.length ? wbw : undefined });
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Sentence Details
+      </p>
+      <div className="space-y-1">
+        <Label className="text-xs">Context</Label>
+        <Textarea
+          className="min-h-[48px] text-xs resize-none"
+          value={fields.context ?? ""}
+          onChange={(e) => set({ context: e.target.value || undefined })}
+          placeholder="When is this sentence used?"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Register</Label>
+        <Select
+          value={fields.register ?? "neutral"}
+          onValueChange={(v) => set({ register: v as SentenceFields["register"] })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="formal">Formal</SelectItem>
+            <SelectItem value="informal">Informal</SelectItem>
+            <SelectItem value="neutral">Neutral</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Word-by-word breakdown</Label>
+          <Button variant="outline" size="xs" onClick={addWord} type="button">
+            <Plus className="size-3" /> Add
+          </Button>
+        </div>
+        {(fields.word_by_word ?? []).map((w, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <Input
+              className="h-7 flex-1 text-xs"
+              value={w.word}
+              onChange={(e) => updateWord(i, { word: e.target.value })}
+              placeholder="Word"
+            />
+            <Input
+              className="h-7 flex-1 text-xs"
+              value={w.translation}
+              onChange={(e) => updateWord(i, { translation: e.target.value })}
+              placeholder="Translation"
+            />
+            <Button
+              variant="destructive"
+              size="xs"
+              onClick={() => removeWord(i)}
+              type="button"
+            >
+              <Trash2 className="size-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PhraseFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: PhraseFields;
+  onChange: (f: PhraseFields) => void;
+}) {
+  const set = (partial: Partial<PhraseFields>) => onChange({ ...fields, ...partial });
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Phrase Details
+      </p>
+      <div className="space-y-1">
+        <Label className="text-xs">Literal Translation</Label>
+        <Input
+          value={fields.literal_translation ?? ""}
+          onChange={(e) => set({ literal_translation: e.target.value || undefined })}
+          placeholder="Word-for-word translation"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Usage Context</Label>
+        <Textarea
+          className="min-h-[48px] text-xs resize-none"
+          value={fields.usage_context ?? ""}
+          onChange={(e) => set({ usage_context: e.target.value || undefined })}
+          placeholder="When and how is this phrase used?"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Register</Label>
+        <Select
+          value={fields.register ?? "neutral"}
+          onValueChange={(v) => set({ register: v as PhraseFields["register"] })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="formal">Formal</SelectItem>
+            <SelectItem value="informal">Informal</SelectItem>
+            <SelectItem value="neutral">Neutral</SelectItem>
+            <SelectItem value="slang">Slang</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
+// ─── Type-specific fields dispatcher ─────────────────────────────
+
+function TypeFieldsForm({
+  type,
+  fields,
+  onChange,
+}: {
+  type: string;
+  fields: VocabFields;
+  onChange: (f: VocabFields) => void;
+}) {
+  if (type === "noun") {
+    return <NounFieldsForm fields={fields as NounFields} onChange={onChange} />;
+  }
+  if (type === "verb") {
+    return <VerbFieldsForm fields={fields as VerbFields} onChange={onChange} />;
+  }
+  if (type === "adjective") {
+    return <AdjectiveFieldsForm fields={fields as AdjectiveFields} onChange={onChange} />;
+  }
+  if (type === "sentence") {
+    return <SentenceFieldsForm fields={fields as SentenceFields} onChange={onChange} />;
+  }
+  if (type === "phrase") {
+    return <PhraseFieldsForm fields={fields as PhraseFields} onChange={onChange} />;
+  }
+  return null;
+}
+
+// ─── Base form fields (shared across add/edit) ──────────────────
+
+interface FormState {
+  language: string;
+  type: string;
+  word: string;
+  meaning: string;
+  exampleSentence: string;
+  category: string;
+  level: string;
+  frequencyRank: string;
+  notes: string;
+  fields: VocabFields;
+}
+
+function makeInitialForm(type: string): FormState {
+  const t = (VOCAB_TYPES.find((vt) => vt.value === type)?.value ?? "noun") as VocabType;
+  return {
+    language: "",
+    type,
+    word: "",
+    meaning: "",
+    exampleSentence: "",
+    category: "other",
+    level: "intermediate",
+    frequencyRank: "",
+    notes: "",
+    fields: defaultFields(t),
+  };
+}
+
 function VocabularyFormFields({
   idPrefix,
-  language,
-  setLanguage,
-  type,
-  setType,
-  word,
-  setWord,
-  meaning,
-  setMeaning,
-  exampleSentence,
-  setExampleSentence,
-  category,
-  setCategory,
-  level,
-  setLevel,
-  frequencyRank,
-  setFrequencyRank,
-  notes,
-  setNotes,
+  form,
+  setForm,
 }: {
   idPrefix: string;
-  language: string;
-  setLanguage: (v: string) => void;
-  type: string;
-  setType: (v: string) => void;
-  word: string;
-  setWord: (v: string) => void;
-  meaning: string;
-  setMeaning: (v: string) => void;
-  exampleSentence: string;
-  setExampleSentence: (v: string) => void;
-  category: string;
-  setCategory: (v: string) => void;
-  level: string;
-  setLevel: (v: string) => void;
-  frequencyRank: string;
-  setFrequencyRank: (v: string) => void;
-  notes: string;
-  setNotes: (v: string) => void;
+  form: FormState;
+  setForm: (f: FormState) => void;
 }) {
+  const update = (partial: Partial<FormState>) => setForm({ ...form, ...partial });
+
+  const handleTypeChange = (newType: string) => {
+    const t = (VOCAB_TYPES.find((vt) => vt.value === newType)?.value ?? "noun") as VocabType;
+    update({
+      type: newType,
+      fields: defaultFields(t),
+    });
+  };
+
   return (
     <div className="space-y-3 py-4">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-language`}>Language</Label>
           <Select
-            value={language}
-            onValueChange={(v) => setLanguage(v ?? "")}
+            value={form.language}
+            onValueChange={(v) => update({ language: v ?? "" })}
             required
           >
             <SelectTrigger id={`${idPrefix}-language`} className="w-full">
@@ -489,7 +927,7 @@ function VocabularyFormFields({
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-type`}>Type</Label>
-          <Select value={type} onValueChange={(v) => setType(v ?? "")} required>
+          <Select value={form.type} onValueChange={(v) => handleTypeChange(v ?? "")} required>
             <SelectTrigger id={`${idPrefix}-type`} className="w-full">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
@@ -506,8 +944,8 @@ function VocabularyFormFields({
       <div className="space-y-1">
         <Label htmlFor={`${idPrefix}-category`}>Category</Label>
         <Select
-          value={category}
-          onValueChange={(v) => setCategory(v ?? "other")}
+          value={form.category}
+          onValueChange={(v) => update({ category: v ?? "other" })}
         >
           <SelectTrigger id={`${idPrefix}-category`} className="w-full">
             <SelectValue placeholder="Select category" />
@@ -525,8 +963,8 @@ function VocabularyFormFields({
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-level`}>Level</Label>
           <Select
-            value={level}
-            onValueChange={(v) => setLevel(v ?? "intermediate")}
+            value={form.level}
+            onValueChange={(v) => update({ level: v ?? "intermediate" })}
           >
             <SelectTrigger id={`${idPrefix}-level`} className="w-full">
               <SelectValue placeholder="Select level" />
@@ -546,8 +984,8 @@ function VocabularyFormFields({
             id={`${idPrefix}-frequency`}
             type="number"
             min={1}
-            value={frequencyRank}
-            onChange={(e) => setFrequencyRank(e.target.value)}
+            value={form.frequencyRank}
+            onChange={(e) => update({ frequencyRank: e.target.value })}
           />
         </div>
       </div>
@@ -556,8 +994,8 @@ function VocabularyFormFields({
           <Label htmlFor={`${idPrefix}-word`}>Word</Label>
           <Textarea
             id={`${idPrefix}-word`}
-            value={word}
-            onChange={(e) => setWord(e.target.value)}
+            value={form.word}
+            onChange={(e) => update({ word: e.target.value })}
             className="min-h-[56px] resize-none"
             rows={2}
             required
@@ -567,8 +1005,8 @@ function VocabularyFormFields({
           <Label htmlFor={`${idPrefix}-meaning`}>Meaning</Label>
           <Textarea
             id={`${idPrefix}-meaning`}
-            value={meaning}
-            onChange={(e) => setMeaning(e.target.value)}
+            value={form.meaning}
+            onChange={(e) => update({ meaning: e.target.value })}
             className="min-h-[56px] resize-none"
             rows={2}
             required
@@ -580,8 +1018,8 @@ function VocabularyFormFields({
           <Label htmlFor={`${idPrefix}-example`}>Example</Label>
           <Textarea
             id={`${idPrefix}-example`}
-            value={exampleSentence}
-            onChange={(e) => setExampleSentence(e.target.value)}
+            value={form.exampleSentence}
+            onChange={(e) => update({ exampleSentence: e.target.value })}
             className="min-h-[56px] resize-none"
             rows={2}
           />
@@ -590,16 +1028,26 @@ function VocabularyFormFields({
           <Label htmlFor={`${idPrefix}-notes`}>Note</Label>
           <Textarea
             id={`${idPrefix}-notes`}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={form.notes}
+            onChange={(e) => update({ notes: e.target.value })}
             className="min-h-[56px] resize-none"
             rows={2}
           />
         </div>
       </div>
+
+      {form.type && (
+        <TypeFieldsForm
+          type={form.type}
+          fields={form.fields}
+          onChange={(f) => update({ fields: f })}
+        />
+      )}
     </div>
   );
 }
+
+// ─── Add Modal ──────────────────────────────────────────────────
 
 function AddModal({
   open,
@@ -610,15 +1058,7 @@ function AddModal({
   onOpenChange: (open: boolean) => void;
   onAdded: () => void;
 }) {
-  const [language, setLanguage] = useState("");
-  const [type, setType] = useState("");
-  const [word, setWord] = useState("");
-  const [meaning, setMeaning] = useState("");
-  const [exampleSentence, setExampleSentence] = useState("");
-  const [category, setCategory] = useState("other");
-  const [level, setLevel] = useState("intermediate");
-  const [frequencyRank, setFrequencyRank] = useState("");
-  const [notes, setNotes] = useState("");
+  const [form, setForm] = useState<FormState>(makeInitialForm("noun"));
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -628,15 +1068,16 @@ function AddModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        language,
-        type,
-        word,
-        meaning,
-        example_sentence: exampleSentence,
-        category,
-        level,
-        frequency_rank: frequencyRank ? parseInt(frequencyRank, 10) : null,
-        notes,
+        language: form.language,
+        type: form.type,
+        word: form.word,
+        meaning: form.meaning,
+        example_sentence: form.exampleSentence,
+        category: form.category,
+        level: form.level,
+        frequency_rank: form.frequencyRank ? parseInt(form.frequencyRank, 10) : null,
+        notes: form.notes,
+        fields: form.fields,
       }),
     });
     setSaving(false);
@@ -645,48 +1086,20 @@ function AddModal({
       return;
     }
     toast.success("Vocabulary added!");
-    setLanguage("");
-    setType("");
-    setWord("");
-    setMeaning("");
-    setExampleSentence("");
-    setCategory("other");
-    setLevel("intermediate");
-    setFrequencyRank("");
-    setNotes("");
+    setForm(makeInitialForm("noun"));
     onOpenChange(false);
     onAdded();
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-3 sm:max-w-2xl">
+      <DialogContent className="gap-3 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader className="gap-0">
             <DialogTitle>Add Vocabulary</DialogTitle>
           </DialogHeader>
-          <VocabularyFormFields
-            idPrefix="add"
-            language={language}
-            setLanguage={setLanguage}
-            type={type}
-            setType={setType}
-            word={word}
-            setWord={setWord}
-            meaning={meaning}
-            setMeaning={setMeaning}
-            exampleSentence={exampleSentence}
-            setExampleSentence={setExampleSentence}
-            category={category}
-            setCategory={setCategory}
-            level={level}
-            setLevel={setLevel}
-            frequencyRank={frequencyRank}
-            setFrequencyRank={setFrequencyRank}
-            notes={notes}
-            setNotes={setNotes}
-          />
-          <DialogFooter className="flex-row">
+          <VocabularyFormFields idPrefix="add" form={form} setForm={setForm} />
+          <DialogFooter className="flex-row pt-2">
             <Button
               variant="outline"
               type="button"
@@ -705,31 +1118,38 @@ function AddModal({
   );
 }
 
+// ─── Edit Modal ─────────────────────────────────────────────────
+
 function EditModal({
   item,
   open,
   onOpenChange,
   onUpdated,
 }: {
-  item: VocabularyItem | null;
+  item: VocabTableRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpdated: () => void;
 }) {
-  const [language, setLanguage] = useState(item?.language ?? "");
-  const [type, setType] = useState(item?.type ?? "");
-  const [word, setWord] = useState(item?.word ?? "");
-  const [meaning, setMeaning] = useState(item?.meaning ?? "");
-  const [exampleSentence, setExampleSentence] = useState(
-    item?.example_sentence ?? "",
-  );
-  const [category, setCategory] = useState(item?.category ?? "other");
-  const [level, setLevel] = useState(item?.level ?? "intermediate");
-  const [frequencyRank, setFrequencyRank] = useState(
-    item?.frequency_rank != null ? String(item.frequency_rank) : "",
-  );
-  const [notes, setNotes] = useState(item?.notes ?? "");
+  const [form, setForm] = useState<FormState>(makeInitialForm("noun"));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (item) {
+      setForm({
+        language: item.language,
+        type: item.type,
+        word: item.word,
+        meaning: item.meaning,
+        exampleSentence: item.example_sentence ?? "",
+        category: item.category ?? "other",
+        level: item.level ?? "intermediate",
+        frequencyRank: item.frequency_rank != null ? String(item.frequency_rank) : "",
+        notes: item.notes ?? "",
+        fields: item.fields ?? defaultFields((item.type as VocabType) || "noun"),
+      });
+    }
+  }, [item]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -739,15 +1159,16 @@ function EditModal({
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        language,
-        type,
-        word,
-        meaning,
-        example_sentence: exampleSentence,
-        category,
-        level,
-        frequency_rank: frequencyRank ? parseInt(frequencyRank, 10) : null,
-        notes,
+        language: form.language,
+        type: form.type,
+        word: form.word,
+        meaning: form.meaning,
+        example_sentence: form.exampleSentence,
+        category: form.category,
+        level: form.level,
+        frequency_rank: form.frequencyRank ? parseInt(form.frequencyRank, 10) : null,
+        notes: form.notes,
+        fields: form.fields,
       }),
     });
     setSaving(false);
@@ -762,33 +1183,13 @@ function EditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-3 sm:max-w-2xl">
+      <DialogContent className="gap-3 sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader className="gap-0">
             <DialogTitle>Edit Vocabulary</DialogTitle>
           </DialogHeader>
-          <VocabularyFormFields
-            idPrefix="edit"
-            language={language}
-            setLanguage={setLanguage}
-            type={type}
-            setType={setType}
-            word={word}
-            setWord={setWord}
-            meaning={meaning}
-            setMeaning={setMeaning}
-            exampleSentence={exampleSentence}
-            setExampleSentence={setExampleSentence}
-            category={category}
-            setCategory={setCategory}
-            level={level}
-            setLevel={setLevel}
-            frequencyRank={frequencyRank}
-            setFrequencyRank={setFrequencyRank}
-            notes={notes}
-            setNotes={setNotes}
-          />
-          <DialogFooter className="flex-row">
+          <VocabularyFormFields idPrefix="edit" form={form} setForm={setForm} />
+          <DialogFooter className="flex-row pt-2">
             <Button
               variant="outline"
               type="button"
@@ -807,8 +1208,10 @@ function EditModal({
   );
 }
 
+// ─── Main Page ──────────────────────────────────────────────────
+
 export default function VocabularyPage() {
-  const [items, setItems] = useState<VocabularyItem[]>([]);
+  const [items, setItems] = useState<VocabTableRow[]>([]);
   const [, setTotal] = useState(0);
   const [vocabTotal, setVocabTotal] = useState(0);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
@@ -828,7 +1231,7 @@ export default function VocabularyPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
-  const [editItem, setEditItem] = useState<VocabularyItem | null>(null);
+  const [editItem, setEditItem] = useState<VocabTableRow | null>(null);
 
   const fetchData = useCallback(() => {
     const params = new URLSearchParams();
@@ -1235,7 +1638,7 @@ export default function VocabularyPage() {
                     <TableCell>
                       <Badge variant="outline">{item.language}</Badge>
                     </TableCell>
-                    <TableCell>{item.type}</TableCell>
+                    <TableCell>{typeLabel(item.type)}</TableCell>
                     <TableCell>{item.score}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -1272,7 +1675,7 @@ export default function VocabularyPage() {
             <Card key={item.id}>
               <CardHeader className="flex items-center gap-2">
                 <span className="inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
-                  {item.type}
+                  {typeLabel(item.type)}
                 </span>
                 <Badge variant="secondary" className="text-xs">
                   {categoryLabel(item.category)}

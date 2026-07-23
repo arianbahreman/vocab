@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextRequest, NextResponse } from "next/server"
+import { type VocabType } from "@/lib/vocab-types"
 
 const VALID_LANGUAGES = ["english", "french"]
 
@@ -8,9 +9,10 @@ interface DueCard {
   word: string
   meaning: string
   language: string
-  type: string | null
+  type: VocabType
   notes: string | null
   example_sentence: string | null
+  fields: unknown
   score: number
   correct_count: number
   wrong_count: number
@@ -28,6 +30,7 @@ function mapCard(card: DueCard, choices: string[], dueCount: number) {
     type: card.type,
     notes: card.notes,
     exampleSentence: card.example_sentence,
+    fields: card.fields ?? {},
     score: card.score,
     correctCount: card.correct_count,
     wrongCount: card.wrong_count,
@@ -62,6 +65,12 @@ export async function GET(request: NextRequest) {
       ? language
       : null
 
+  const typeParam = request.nextUrl.searchParams.get("type")
+  const filterType =
+    typeParam && typeParam !== "all"
+      ? typeParam
+      : null
+
   const excludeParam = request.nextUrl.searchParams.get("exclude")
   const excludeIds = excludeParam ? excludeParam.split(",").filter(Boolean) : []
 
@@ -79,6 +88,7 @@ export async function GET(request: NextRequest) {
     .limit(1)
 
   if (filterLanguage) existsQuery = existsQuery.eq("language", filterLanguage)
+  if (filterType) existsQuery = existsQuery.eq("type", filterType)
 
   const { data: all } = await existsQuery
 
@@ -93,18 +103,20 @@ export async function GET(request: NextRequest) {
     .lte("next_review", now)
 
   if (filterLanguage) countQuery = countQuery.eq("language", filterLanguage)
+  if (filterType) countQuery = countQuery.eq("type", filterType)
 
   const { count: dueCount } = await countQuery
 
   let dueQuery = supabase
     .from("vocabulary")
-    .select("id, word, meaning, language, type, notes, example_sentence, score, correct_count, wrong_count, ease_factor, interval, repetitions")
+    .select("id, word, meaning, language, type, notes, example_sentence, fields, score, correct_count, wrong_count, ease_factor, interval, repetitions")
     .eq("user_id", user.id)
     .lte("next_review", now)
     .order("next_review", { ascending: true })
     .limit(limit)
 
   if (filterLanguage) dueQuery = dueQuery.eq("language", filterLanguage)
+  if (filterType) dueQuery = dueQuery.eq("type", filterType)
   if (excludeIds.length > 0) dueQuery = dueQuery.not("id", "in", `(${excludeIds.join(",")})`)
 
   const { data: due } = await dueQuery
@@ -133,6 +145,7 @@ export async function GET(request: NextRequest) {
     .limit(1)
 
   if (filterLanguage) nextUpQuery = nextUpQuery.eq("language", filterLanguage)
+  if (filterType) nextUpQuery = nextUpQuery.eq("type", filterType)
   if (excludeIds.length > 0) nextUpQuery = nextUpQuery.not("id", "in", `(${excludeIds.join(",")})`)
 
   const { data: nextUp } = await nextUpQuery

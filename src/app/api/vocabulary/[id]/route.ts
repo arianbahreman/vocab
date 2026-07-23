@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { type VocabType } from "@/lib/vocab-types"
 
 export async function PUT(
   request: Request,
@@ -13,20 +14,26 @@ export async function PUT(
   const body = await request.json()
   const word = body.word ?? body.original
 
+  const updateData: Record<string, unknown> = {
+    language: body.language,
+    type: body.type,
+    word,
+    meaning: body.meaning,
+    notes: body.notes,
+    example_sentence: body.example_sentence ?? "",
+    category: body.category ?? "other",
+    level: body.level ?? "intermediate",
+    frequency_rank: body.frequency_rank ?? null,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (body.fields !== undefined) {
+    updateData.fields = body.fields
+  }
+
   const { data, error } = await supabase
     .from("vocabulary")
-    .update({
-      language: body.language,
-      type: body.type,
-      word,
-      meaning: body.meaning,
-      notes: body.notes,
-      example_sentence: body.example_sentence ?? "",
-      category: body.category ?? "other",
-      level: body.level ?? "intermediate",
-      frequency_rank: body.frequency_rank ?? null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()

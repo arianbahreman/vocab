@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { currentStreak } from "@/lib/vocab"
+import { defaultFields, type VocabType } from "@/lib/vocab-types"
 
 interface ImportItem {
   type: string
@@ -11,6 +12,15 @@ interface ImportItem {
   category?: string
   level?: string
   frequency_rank?: number | null
+  plural?: string
+  gender?: string
+}
+
+const VALID_TYPES = ["noun", "verb", "adjective", "sentence", "phrase"]
+
+function coerceType(raw: string): VocabType {
+  if (VALID_TYPES.includes(raw)) return raw as VocabType
+  return "noun"
 }
 
 export async function GET(request: Request) {
@@ -123,18 +133,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const rows = body.items.map((item: ImportItem) => ({
-      user_id: user.id,
-      language: body.language,
-      type: item.type,
-      word: item.word,
-      meaning: item.meaning,
-      notes: item.note || "",
-      example_sentence: item.example_sentence || "",
-      category: item.category || "other",
-      level: item.level || "intermediate",
-      frequency_rank: item.frequency_rank ?? null,
-    }))
+    const rows = body.items.map((item: ImportItem) => {
+      const t = coerceType(item.type)
+      const fields = defaultFields(t)
+      if (t === "noun" && item.plural) (fields as any).plural = item.plural
+      if (t === "noun" && item.gender) (fields as any).gender = item.gender
+      return {
+        user_id: user.id,
+        language: body.language,
+        type: t,
+        word: item.word,
+        meaning: item.meaning,
+        notes: item.note || "",
+        example_sentence: item.example_sentence || "",
+        category: item.category || "other",
+        level: item.level || "intermediate",
+        frequency_rank: item.frequency_rank ?? null,
+        fields,
+      }
+    })
 
     const { data, error } = await supabase
       .from("vocabulary")
@@ -153,12 +170,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
   }
 
+  const t = coerceType(body.type)
+  const fields = body.fields ?? defaultFields(t)
+
   const { data, error } = await supabase
     .from("vocabulary")
     .insert({
       user_id: user.id,
       language: body.language,
-      type: body.type,
+      type: t,
       word,
       meaning: body.meaning,
       notes: body.notes || "",
@@ -166,6 +186,7 @@ export async function POST(request: Request) {
       category: body.category || "other",
       level: body.level || "intermediate",
       frequency_rank: body.frequency_rank ?? null,
+      fields,
     })
     .select()
     .single()

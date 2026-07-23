@@ -26,23 +26,8 @@ import {
   BookOpen,
   RotateCw,
 } from "lucide-react";
-
-interface FlashCard {
-  id: string;
-  word: string;
-  meaning: string;
-  language?: string;
-  type?: string | null;
-  exampleSentence?: string | null;
-  score?: number;
-  correctCount?: number;
-  wrongCount?: number;
-  easeFactor?: number;
-  interval?: number;
-  repetitions?: number;
-  dueCount: number;
-  choices: string[];
-}
+import type { VocabFlashCard, VocabType, VocabFields } from "@/lib/vocab-types";
+import { VOCAB_TYPES } from "@/lib/vocab-types";
 
 const GRADES = [
   { quality: 0, label: "Again", icon: XCircle, shortcut: "1" },
@@ -67,8 +52,9 @@ function FlashcardsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const language = searchParams.get("language") ?? "all";
+  const typeFilter = searchParams.get("type") ?? "all";
 
-  const [card, setCard] = useState<FlashCard | null>(null);
+  const [card, setCard] = useState<VocabFlashCard | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -83,7 +69,7 @@ function FlashcardsContent() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [correctAnswer, setCorrectAnswer] = useState<string | null>(null);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cardQueueRef = useRef<FlashCard[]>([]);
+  const cardQueueRef = useRef<VocabFlashCard[]>([]);
   const preloadingRef = useRef(false);
   const currentCardIdRef = useRef<string | null>(null);
 
@@ -92,7 +78,7 @@ function FlashcardsContent() {
       limit: number,
       excludeIds: string[],
     ): Promise<{
-      cards?: FlashCard[];
+      cards?: VocabFlashCard[];
       dueCount?: number;
       done?: boolean;
       nextDue?: string | null;
@@ -100,6 +86,7 @@ function FlashcardsContent() {
     } | null> => {
       const params = new URLSearchParams();
       if (language !== "all") params.set("language", language);
+      if (typeFilter !== "all") params.set("type", typeFilter);
       params.set("limit", String(limit));
       if (excludeIds.length > 0) params.set("exclude", excludeIds.join(","));
 
@@ -115,10 +102,10 @@ function FlashcardsContent() {
         return null;
       }
     },
-    [language],
+    [language, typeFilter],
   );
 
-  const applyCard = useCallback((data: FlashCard) => {
+  const applyCard = useCallback((data: VocabFlashCard) => {
     currentCardIdRef.current = data.id;
     setCard(data);
     setSessionTotal((prev) => (prev === null ? data.dueCount : prev));
@@ -330,6 +317,22 @@ function FlashcardsContent() {
     router.replace(`/flashcards?${params.toString()}`, { scroll: false });
   }
 
+  function handleTypeChange(value: string | null) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!value || value === "all") {
+      params.delete("type");
+    } else {
+      params.set("type", value);
+    }
+    cardQueueRef.current = [];
+    preloadingRef.current = false;
+    currentCardIdRef.current = null;
+    setSessionTotal(null);
+    setReviewedCount(0);
+    setLoading(true);
+    router.replace(`/flashcards?${params.toString()}`, { scroll: false });
+  }
+
   function getIntervalPreview(quality: number): string {
     if (!card || card.easeFactor === undefined) return "";
     const result = applyReview(
@@ -510,6 +513,19 @@ function FlashcardsContent() {
                 <SelectItem value="french">French</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={typeFilter} onValueChange={handleTypeChange}>
+              <SelectTrigger className="w-28">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {VOCAB_TYPES.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Badge variant="secondary" className="h-auto gap-1 px-2.5 py-1">
               <CheckCircle2 className="size-3.5 text-green-600" />
               {reviewedCount}
@@ -537,6 +553,7 @@ function FlashcardsContent() {
           word={card.word}
           meaning={card.meaning}
           type={card.type}
+          fields={card.fields}
           exampleSentence={card.exampleSentence}
           score={card.score}
           correctCount={card.correctCount}
