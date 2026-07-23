@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase/client"
 import { isAdmin } from "@/lib/roles"
 import { useEffect, useState } from "react"
 import {
-  LayoutDashboard,
   BookOpen,
   GraduationCap,
   BarChart3,
@@ -15,32 +14,26 @@ import {
   LogOut,
   Menu,
   X,
+  Book,
+  ChevronDown,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
-const baseNavLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const mainNavLinks = [
   { href: "/vocabulary", label: "Vocabulary", icon: BookOpen },
+  { href: "/books", label: "Books", icon: Book },
   { href: "/flashcards", label: "Flashcards", icon: GraduationCap },
-  { href: "/statistics", label: "Statistics", icon: BarChart3 },
 ]
-
-const adminNavLink = {
-  href: "/admin",
-  label: "Users",
-  icon: Users,
-}
 
 export default function Navbar() {
   const [username, setUsername] = useState<string | null>(null)
   const [admin, setAdmin] = useState(false)
   const [open, setOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
-
-  const navLinks = admin ? [...baseNavLinks, adminNavLink] : baseNavLinks
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -52,9 +45,15 @@ export default function Navbar() {
   async function handleLogout() {
     await supabase.auth.signOut()
     setOpen(false)
+    setDropdownOpen(false)
     router.push("/login")
     router.refresh()
   }
+
+  const dropdownItems = [
+    ...(admin ? [{ href: "/admin", label: "Users", icon: Users }] : []),
+    { href: "/statistics", label: "Statistics", icon: BarChart3 },
+  ]
 
   return (
     <header className="border-b">
@@ -65,31 +64,67 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-4 md:flex">
-          {username && (
-            <span className="text-sm text-muted-foreground">{username}</span>
+        <div className="hidden items-center gap-1 md:flex">
+          {mainNavLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
+                pathname === link.href
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              <link.icon className="size-4" />
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop dropdown */}
+        <div className="hidden md:relative md:block">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {username ?? "Menu"}
+            <ChevronDown className="size-3.5" />
+          </button>
+          {dropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setDropdownOpen(false)}
+              />
+              <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-lg border bg-popover p-1 shadow-md">
+                {dropdownItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setDropdownOpen(false)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                      pathname === item.href
+                        ? "bg-muted text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Link>
+                ))}
+                <div className="my-1 border-t" />
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <LogOut className="size-4" />
+                  Logout
+                </button>
+              </div>
+            </>
           )}
-          <div className="flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
-                  pathname === link.href
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                <link.icon className="size-4" />
-                {link.label}
-              </Link>
-            ))}
-          </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="size-4" />
-            Logout
-          </Button>
         </div>
 
         {/* Mobile hamburger */}
@@ -120,7 +155,7 @@ export default function Navbar() {
               </p>
             )}
             <div className="flex flex-col gap-1 p-2">
-              {navLinks.map((link) => (
+              {mainNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -136,11 +171,26 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-            </div>
-            <div className="border-t p-2">
+              <div className="my-1 border-t" />
+              {dropdownItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted",
+                    pathname === item.href
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Link>
+              ))}
               <Button
                 variant="outline"
-                className="w-full justify-start gap-3 px-3"
+                className="mt-1 w-full justify-start gap-3 px-3"
                 onClick={handleLogout}
               >
                 <LogOut className="size-4" />

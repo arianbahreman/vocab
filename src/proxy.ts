@@ -8,6 +8,7 @@ const protectedPaths = [
   "/flashcards",
   "/statistics",
   "/admin",
+  "/books",
 ]
 
 export async function proxy(request: NextRequest) {

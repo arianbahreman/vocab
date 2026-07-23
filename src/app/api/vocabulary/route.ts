@@ -68,6 +68,7 @@ export async function GET(request: Request) {
   const level = searchParams.get("level") || ""
   const sort = searchParams.get("sort") || "newest"
   const isExport = searchParams.get("export") === "true"
+  const isAll = searchParams.get("all") === "true"
   const page = parseInt(searchParams.get("page") || "1")
   const limit = 20
   const offset = (page - 1) * limit
@@ -85,30 +86,34 @@ export async function GET(request: Request) {
   if (category && category !== "all") query = query.eq("category", category)
   if (level && level !== "all") query = query.eq("level", level)
 
-  switch (sort) {
-    case "oldest":
-      query = query.order("created_at", { ascending: true })
-      break
-    case "score_low":
-      query = query.order("score", { ascending: true })
-      break
-    case "score_high":
-      query = query.order("score", { ascending: false })
-      break
-    case "frequency":
-      query = query.order("frequency_rank", { ascending: true, nullsFirst: false })
-      break
-    default:
-      query = query.order("created_at", { ascending: false })
+  if (isAll) {
+    query = query.order("word", { ascending: true })
+  } else {
+    switch (sort) {
+      case "oldest":
+        query = query.order("created_at", { ascending: true })
+        break
+      case "score_low":
+        query = query.order("score", { ascending: true })
+        break
+      case "score_high":
+        query = query.order("score", { ascending: false })
+        break
+      case "frequency":
+        query = query.order("frequency_rank", { ascending: true, nullsFirst: false })
+        break
+      default:
+        query = query.order("created_at", { ascending: false })
+    }
   }
 
-  if (!isExport) {
+  if (!isExport && !isAll) {
     query = query.range(offset, offset + limit - 1)
   }
 
   const { data, count } = await query
 
-  if (isExport) {
+  if (isExport || isAll) {
     return NextResponse.json({ items: data ?? [] })
   }
 

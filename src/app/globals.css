@@ -133,6 +133,36 @@
   }
 }
 
+@keyframes page-turn-away {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(-90deg);
+  }
+}
+
+@keyframes page-turn-in {
+  0% {
+    transform: rotateY(90deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
+}
+
+@layer utilities {
+  .page-turn-origin {
+    transform-origin: left center;
+  }
+  .page-turn-away {
+    animation: page-turn-away 250ms ease-in forwards;
+  }
+  .page-turn-in {
+    animation: page-turn-in 250ms ease-out forwards;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flashcard-inner {
     transition: none !important;
