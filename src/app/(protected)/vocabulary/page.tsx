@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import {
   Upload,
   Download,
   Save,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -349,6 +351,26 @@ function ExportModal({
   );
 }
 
+function generateSampleCsv(): string {
+  const header =
+    "type,word,meaning,example_sentence,category,level,frequency_rank,fields";
+  const rows = [
+    ['noun', 'hello', 'سلام', '"Hello, how are you?"', 'people_relationships', 'elementary', '100', '{"plural":"hellos","gender":"masculine"}'],
+    ['verb', 'go', 'رفتن', '"I go to school every day."', 'daily_routines', 'elementary', '80', '{"is_regular":false,"present":{"1s":"میروم","3s":"میرود"},"past":{"1s":"رفتم","3s":"رفت"}}'],
+    ['adjective', 'beautiful', 'زیبا', '"The sky is beautiful tonight."', 'descriptions', 'intermediate', '120', '{"comparative":"زیباتر","superlative":"زیباترین"}'],
+    ['adverb', 'quickly', 'سریع', '"He quickly finished his homework."', 'manner', 'intermediate', '200', '{}'],
+    ['noun', 'book', 'کتاب', '"This book is very interesting."', 'education', 'elementary', '50', '{"plural":"books","gender":"inanimate"}'],
+    ['verb', 'eat', 'خوردن', '"We eat lunch at noon."', 'food', 'elementary', '90', '{"is_regular":true,"present":{"1s":"میخورم","3s":"میخورد"},"past":{"1s":"خوردم","3s":"خورد"}}'],
+    ['adjective', 'tall', 'بلند', '"The building is very tall."', 'descriptions', 'elementary', '150', '{"comparative":"بلندتر","superlative":"بلندترین"}'],
+  ];
+  const escape = (v: string) =>
+    v.includes(",") || v.includes('"') || v.includes("\n")
+      ? `"${v.replace(/"/g, '""')}"`
+      : v;
+  const csvRows = rows.map((r) => r.map(escape).join(","));
+  return [header, ...csvRows].join("\n");
+}
+
 function ImportModal({
   open,
   onOpenChange,
@@ -399,6 +421,17 @@ function ImportModal({
 
   const canImport = importLanguage && importFile;
 
+  function handleDownloadSample() {
+    const csv = generateSampleCsv();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vocabulary-sample.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -438,15 +471,29 @@ function ImportModal({
               example_sentence, category, level, frequency_rank, note, fields
               (type-specific fields as JSON)
             </p>
-            <div className="rounded-lg border bg-muted/50 p-2 font-mono text-[0.375rem] leading-snug break-all">
-              <p className="font-medium text-foreground">Example:</p>
-              <p>
-                type,word,meaning,example_sentence,category,level,frequency_rank,fields
-              </p>
-              <p>
-                noun,hello,سلام,&quot;Hello, how are you?&quot;,people_relationships,elementary,100,&quot;
-                {'{"'}plural&quot;:&quot;hellos&quot;,&quot;gender&quot;:&quot;masculine&quot;{'}&quot;'}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                Need a template?{" "}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={handleDownloadSample}
+              >
+                <Download className="size-3.5" />
+                Download sample CSV
+              </Button>
+              <Link href="/help/import">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-7"
+                  title="Import help"
+                >
+                  <HelpCircle className="size-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
