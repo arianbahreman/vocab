@@ -34,6 +34,9 @@ function generateSampleCsv(): string {
     ['verb', 'eat', 'خوردن', '"We eat lunch at noon."', 'food_dining', 'elementary', '90', '{"is_regular":true,"present":{"i":"میخورم","we":"میخوریم"},"past":{"i":"خوردم","we":"خوردیم"}}'],
     ['sentence', 'How are you?', 'حال شما چطور است؟', '""', 'people_relationships', 'elementary', '', '{"register":"formal","literal_translation":"How is your health?"}'],
     ['phrase', 'Thank you', 'متشکرم', '""', 'people_relationships', 'elementary', '', '{"register":"formal","usage_context":"polite expression of gratitude"}'],
+    ['adverb', 'quickly', 'سریع', '"He quickly finished his homework."', 'manner', 'intermediate', '200', '{"adverb_type":"manner","comparative":"سریع‌تر","superlative":"سریع‌ترین"}'],
+    ['pronoun', 'he', 'او', '"He is a student."', 'people_relationships', 'elementary', '10', '{"pronoun_type":"personal","person":"third","number":"singular","gender":"masculine","case":"nominative"}'],
+    ['preposition', 'in', 'در', '"The book is in the bag."', 'places_environment', 'elementary', '15', '{"case_governed":"none","preposition_type":"location"}'],
   ];
   const escape = (v: string) =>
     v.includes(",") || v.includes('"') || v.includes("\n")
@@ -52,7 +55,7 @@ function generateMarkdownDocs(): string {
 
 | Column | Description |
 |--------|-------------|
-| \`type\` | One of: \`noun\`, \`verb\`, \`adjective\`, \`sentence\`, \`phrase\` |
+| \`type\` | One of: \`noun\`, \`verb\`, \`adjective\`, \`adverb\`, \`pronoun\`, \`preposition\`, \`sentence\`, \`phrase\` |
 | \`word\` | The word or phrase in the target language |
 | \`meaning\` | Translation in your native language |
 
@@ -101,6 +104,31 @@ Conjugation keys: \`i\`, \`you_sg\`, \`he_she_it\`, \`we\`, \`you_pl\`, \`they\`
 | \`feminine_form\` | string | Feminine form |
 | \`neuter_form\` | string | Neuter form |
 | \`plural_form\` | string | Plural form |
+
+### Adverb
+| Field | Type | Description |
+|-------|------|-------------|
+| \`adverb_type\` | string | \`manner\`, \`time\`, \`place\`, \`frequency\`, \`degree\`, \`interrogative\`, \`relative\`, or \`other\` |
+| \`comparative\` | string | Comparative form (e.g. faster, more quickly) |
+| \`superlative\` | string | Superlative form (e.g. fastest, most quickly) |
+| \`synonyms\` | array | List of synonyms |
+
+### Pronoun
+| Field | Type | Description |
+|-------|------|-------------|
+| \`pronoun_type\` | string | \`personal\`, \`possessive\`, \`reflexive\`, \`demonstrative\`, \`interrogative\`, \`relative\`, \`indefinite\`, or \`other\` |
+| \`person\` | string | \`first\`, \`second\`, or \`third\` |
+| \`number\` | string | \`singular\` or \`plural\` |
+| \`gender\` | string | \`masculine\`, \`feminine\`, \`neuter\`, or \`none\` |
+| \`case\` | string | \`nominative\`, \`accusative\`, \`dative\`, \`genitive\`, or \`none\` |
+| \`formal\` | boolean | Whether the pronoun is formal (e.g. Sie vs du) |
+
+### Preposition
+| Field | Type | Description |
+|-------|------|-------------|
+| \`case_governed\` | string | \`accusative\`, \`dative\`, \`genitive\`, or \`none\` |
+| \`preposition_type\` | string | \`location\`, \`time\`, \`direction\`, \`manner\`, \`cause\`, or \`other\` |
+| \`contractions\` | object | Map of contracted forms (e.g. {"zum":"zu + dem"}) |
 
 ### Sentence
 | Field | Type | Description |
@@ -258,6 +286,57 @@ const fieldDocs: {
       },
       { field: "neuter_form", type: "string", description: "Neuter form" },
       { field: "plural_form", type: "string", description: "Plural form" },
+    ],
+  },
+  {
+    type: "adverb",
+    label: "Adverb",
+    fields: [
+      {
+        field: "adverb_type",
+        type: "string",
+        description: "manner, time, place, frequency, degree, interrogative, relative, or other",
+      },
+      { field: "comparative", type: "string", description: "Comparative form (e.g. faster, more quickly)" },
+      { field: "superlative", type: "string", description: "Superlative form (e.g. fastest, most quickly)" },
+      {
+        field: "synonyms",
+        type: "array",
+        description: "List of synonyms",
+      },
+    ],
+  },
+  {
+    type: "pronoun",
+    label: "Pronoun",
+    fields: [
+      {
+        field: "pronoun_type",
+        type: "string",
+        description: "personal, possessive, reflexive, demonstrative, interrogative, relative, indefinite, or other",
+      },
+      { field: "person", type: "string", description: "first, second, or third" },
+      { field: "number", type: "string", description: "singular or plural" },
+      { field: "gender", type: "string", description: "masculine, feminine, neuter, or none" },
+      { field: "case", type: "string", description: "nominative, accusative, dative, genitive, or none" },
+      { field: "formal", type: "boolean", description: "Whether the pronoun is formal (e.g. Sie vs du)" },
+    ],
+  },
+  {
+    type: "preposition",
+    label: "Preposition",
+    fields: [
+      { field: "case_governed", type: "string", description: "accusative, dative, genitive, or none" },
+      {
+        field: "preposition_type",
+        type: "string",
+        description: "location, time, direction, manner, cause, or other",
+      },
+      {
+        field: "contractions",
+        type: "object",
+        description: 'Map of contracted forms (e.g. {"zum":"zu + dem","zur":"zu + der"})',
+      },
     ],
   },
   {
@@ -461,7 +540,7 @@ export default function ImportHelpPage() {
                   <TableRow>
                     <TableCell className="font-mono text-xs">type</TableCell>
                     <TableCell>
-                      One of: noun, verb, adjective, sentence, phrase
+                      One of: noun, verb, adjective, adverb, pronoun, preposition, sentence, phrase
                     </TableCell>
                   </TableRow>
                   <TableRow>

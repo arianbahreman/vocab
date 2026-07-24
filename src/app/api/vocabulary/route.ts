@@ -17,7 +17,7 @@ interface ImportItem {
   is_public?: boolean
 }
 
-const VALID_TYPES = ["noun", "verb", "adjective", "sentence", "phrase"]
+const VALID_TYPES = ["noun", "verb", "adjective", "adverb", "pronoun", "preposition", "sentence", "phrase"]
 
 function coerceType(raw: string): VocabType {
   if (VALID_TYPES.includes(raw)) return raw as VocabType

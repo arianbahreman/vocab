@@ -2,6 +2,9 @@ export const VOCAB_TYPES = [
   { value: "noun", label: "Noun" },
   { value: "verb", label: "Verb" },
   { value: "adjective", label: "Adjective" },
+  { value: "adverb", label: "Adverb" },
+  { value: "pronoun", label: "Pronoun" },
+  { value: "preposition", label: "Preposition" },
   { value: "sentence", label: "Sentence" },
   { value: "phrase", label: "Phrase" },
 ] as const
@@ -83,6 +86,34 @@ export interface AdjectiveFields {
   plural_form?: string
 }
 
+// ─── Adverb ───────────────────────────────────────────────────────
+
+export interface AdverbFields {
+  adverb_type?: "manner" | "time" | "place" | "frequency" | "degree" | "interrogative" | "relative" | "other"
+  comparative?: string
+  superlative?: string
+  synonyms?: string[]
+}
+
+// ─── Pronoun ──────────────────────────────────────────────────────
+
+export interface PronounFields {
+  pronoun_type?: "personal" | "possessive" | "reflexive" | "demonstrative" | "interrogative" | "relative" | "indefinite" | "other"
+  person?: "first" | "second" | "third"
+  number?: "singular" | "plural"
+  gender?: "masculine" | "feminine" | "neuter" | "none"
+  case?: "nominative" | "accusative" | "dative" | "genitive" | "none"
+  formal?: boolean
+}
+
+// ─── Preposition ──────────────────────────────────────────────────
+
+export interface PrepositionFields {
+  case_governed?: "accusative" | "dative" | "genitive" | "none"
+  preposition_type?: "location" | "time" | "direction" | "manner" | "cause" | "other"
+  contractions?: Record<string, string>
+}
+
 // ─── Sentence ────────────────────────────────────────────────────
 
 export interface SentenceFields {
@@ -106,6 +137,9 @@ export type VocabFields =
   | NounFields
   | VerbFields
   | AdjectiveFields
+  | AdverbFields
+  | PronounFields
+  | PrepositionFields
   | SentenceFields
   | PhraseFields
 
@@ -113,6 +147,9 @@ export type FieldsByType = {
   noun: NounFields
   verb: VerbFields
   adjective: AdjectiveFields
+  adverb: AdverbFields
+  pronoun: PronounFields
+  preposition: PrepositionFields
   sentence: SentenceFields
   phrase: PhraseFields
 }
@@ -130,6 +167,12 @@ export function defaultFields(type: VocabType): VocabFields {
       } satisfies VerbFields as VerbFields
     case "adjective":
       return {} satisfies AdjectiveFields as AdjectiveFields
+    case "adverb":
+      return {} satisfies AdverbFields as AdverbFields
+    case "pronoun":
+      return {} satisfies PronounFields as PronounFields
+    case "preposition":
+      return {} satisfies PrepositionFields as PrepositionFields
     case "sentence":
       return {} satisfies SentenceFields as SentenceFields
     case "phrase":
@@ -145,6 +188,15 @@ export function isVerbFields(f: VocabFields): f is VerbFields {
 }
 export function isAdjectiveFields(f: VocabFields): f is AdjectiveFields {
   return "comparative" in f || "superlative" in f
+}
+export function isAdverbFields(f: VocabFields): f is AdverbFields {
+  return "adverb_type" in f || "synonyms" in f
+}
+export function isPronounFields(f: VocabFields): f is PronounFields {
+  return "pronoun_type" in f || "person" in f
+}
+export function isPrepositionFields(f: VocabFields): f is PrepositionFields {
+  return "case_governed" in f || "preposition_type" in f
 }
 export function isSentenceFields(f: VocabFields): f is SentenceFields {
   return "word_by_word" in f || "context" in f

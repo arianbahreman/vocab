@@ -2,10 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, BookOpen } from "lucide-react";
 import type { VocabFields, VocabType } from "@/lib/vocab-types";
-import { isNounFields, isVerbFields, isAdjectiveFields, isSentenceFields, isPhraseFields, typeLabel } from "@/lib/vocab-types";
+import { isNounFields, isVerbFields, isAdjectiveFields, isAdverbFields, isPronounFields, isPrepositionFields, isSentenceFields, isPhraseFields, typeLabel } from "@/lib/vocab-types";
 import { NounCardFront, NounCardBack } from "./NounCardContent";
 import { VerbCardFront, VerbCardBack } from "./VerbCardContent";
 import { AdjectiveCardFront, AdjectiveCardBack } from "./AdjectiveCardContent";
+import { AdverbCardFront, AdverbCardBack } from "./AdverbCardContent";
+import { PronounCardFront, PronounCardBack } from "./PronounCardContent";
+import { PrepositionCardFront, PrepositionCardBack } from "./PrepositionCardContent";
 import { SentenceCardFront, SentenceCardBack } from "./SentenceCardContent";
 import { PhraseCardFront, PhraseCardBack } from "./PhraseCardContent";
 
@@ -33,6 +36,15 @@ function FrontFace({ word, type, fields }: { word: string; type?: VocabType | st
   if (type === "adjective" && fields && isAdjectiveFields(fields)) {
     return <AdjectiveCardFront word={word} fields={fields} />;
   }
+  if (type === "adverb" && fields && isAdverbFields(fields)) {
+    return <AdverbCardFront word={word} fields={fields} />;
+  }
+  if (type === "pronoun" && fields && isPronounFields(fields)) {
+    return <PronounCardFront word={word} fields={fields} />;
+  }
+  if (type === "preposition" && fields && isPrepositionFields(fields)) {
+    return <PrepositionCardFront word={word} fields={fields} />;
+  }
   if (type === "sentence" && fields && isSentenceFields(fields)) {
     return <SentenceCardFront word={word} fields={fields} />;
   }
@@ -53,6 +65,9 @@ function BackFace({ meaning, type, fields, exampleSentence }: {
       {type === "noun" && fields && isNounFields(fields) && <NounCardBack meaning={meaning} fields={fields} />}
       {type === "verb" && fields && isVerbFields(fields) && <VerbCardBack meaning={meaning} fields={fields} />}
       {type === "adjective" && fields && isAdjectiveFields(fields) && <AdjectiveCardBack meaning={meaning} fields={fields} />}
+      {type === "adverb" && fields && isAdverbFields(fields) && <AdverbCardBack meaning={meaning} fields={fields} />}
+      {type === "pronoun" && fields && isPronounFields(fields) && <PronounCardBack meaning={meaning} fields={fields} />}
+      {type === "preposition" && fields && isPrepositionFields(fields) && <PrepositionCardBack meaning={meaning} fields={fields} />}
       {type === "sentence" && fields && isSentenceFields(fields) && <SentenceCardBack meaning={meaning} fields={fields} />}
       {type === "phrase" && fields && isPhraseFields(fields) && <PhraseCardBack meaning={meaning} fields={fields} />}
     </>

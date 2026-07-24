@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BookOpen, Zap, Palette, MessageSquare, Languages, type LucideIcon } from "lucide-react"
+import { BookOpen, Zap, Palette, MessageSquare, Languages, ArrowLeftRight, AtSign, MoveRight, type LucideIcon } from "lucide-react"
 import type { VocabType } from "@/lib/vocab-types"
 
 const TYPE_CONFIG: Record<
@@ -48,6 +48,39 @@ const TYPE_CONFIG: Record<
     badgeBg: "bg-emerald-100",
     badgeText: "text-emerald-700",
     hoverGlow: "group-hover:shadow-emerald-200/50",
+  },
+  adverb: {
+    icon: ArrowLeftRight,
+    gradient: "from-teal-500/10 to-cyan-500/5",
+    border: "border-teal-200",
+    topBar: "border-t-teal-400",
+    iconBg: "bg-teal-100",
+    iconColor: "text-teal-600",
+    badgeBg: "bg-teal-100",
+    badgeText: "text-teal-700",
+    hoverGlow: "group-hover:shadow-teal-200/50",
+  },
+  pronoun: {
+    icon: AtSign,
+    gradient: "from-indigo-500/10 to-slate-500/5",
+    border: "border-indigo-200",
+    topBar: "border-t-indigo-400",
+    iconBg: "bg-indigo-100",
+    iconColor: "text-indigo-600",
+    badgeBg: "bg-indigo-100",
+    badgeText: "text-indigo-700",
+    hoverGlow: "group-hover:shadow-indigo-200/50",
+  },
+  preposition: {
+    icon: MoveRight,
+    gradient: "from-amber-500/10 to-yellow-500/5",
+    border: "border-amber-200",
+    topBar: "border-t-amber-400",
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+    hoverGlow: "group-hover:shadow-amber-200/50",
   },
   sentence: {
     icon: MessageSquare,

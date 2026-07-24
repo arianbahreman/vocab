@@ -68,10 +68,13 @@ import type {
   NounFields,
   VerbFields,
   AdjectiveFields,
+  AdverbFields,
+  PronounFields,
+  PrepositionFields,
   SentenceFields,
   PhraseFields,
 } from "@/lib/vocab-types";
-import { isNounFields, isVerbFields, isAdjectiveFields, isSentenceFields, isPhraseFields } from "@/lib/vocab-types";
+import { isNounFields, isVerbFields, isAdjectiveFields, isAdverbFields, isPronounFields, isPrepositionFields, isSentenceFields, isPhraseFields } from "@/lib/vocab-types";
 import { createClient } from "@/lib/supabase/client";
 import { isAdmin } from "@/lib/roles";
 import {
@@ -983,6 +986,316 @@ function PhraseFieldsForm({
   );
 }
 
+function AdverbFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: AdverbFields;
+  onChange: (f: AdverbFields) => void;
+}) {
+  const set = (partial: Partial<AdverbFields>) => onChange({ ...fields, ...partial });
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Adverb Details
+      </p>
+
+      <div className="space-y-1">
+        <Label className="text-xs">Type</Label>
+        <Select
+          value={fields.adverb_type ?? ""}
+          onValueChange={(v) => set({ adverb_type: (v || undefined) as AdverbFields["adverb_type"] })}
+        >
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue placeholder="Select type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="manner">Manner</SelectItem>
+            <SelectItem value="time">Time</SelectItem>
+            <SelectItem value="place">Place</SelectItem>
+            <SelectItem value="frequency">Frequency</SelectItem>
+            <SelectItem value="degree">Degree</SelectItem>
+            <SelectItem value="interrogative">Interrogative</SelectItem>
+            <SelectItem value="relative">Relative</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Comparative</Label>
+          <Input
+            className="h-7 text-xs"
+            value={fields.comparative ?? ""}
+            onChange={(e) => set({ comparative: e.target.value || undefined })}
+            placeholder="e.g. faster, more quickly"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Superlative</Label>
+          <Input
+            className="h-7 text-xs"
+            value={fields.superlative ?? ""}
+            onChange={(e) => set({ superlative: e.target.value || undefined })}
+            placeholder="e.g. fastest, most quickly"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs">Synonyms (comma-separated)</Label>
+        <Input
+          className="h-7 text-xs"
+          value={fields.synonyms?.join(", ") ?? ""}
+          onChange={(e) =>
+            set({
+              synonyms: e.target.value
+                ? e.target.value.split(",").map((s) => s.trim()).filter(Boolean)
+                : undefined,
+            })
+          }
+          placeholder="rapidly, swiftly, hastily"
+        />
+      </div>
+    </div>
+  );
+}
+
+function PronounFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: PronounFields;
+  onChange: (f: PronounFields) => void;
+}) {
+  const set = (partial: Partial<PronounFields>) => onChange({ ...fields, ...partial });
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Pronoun Details
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Type</Label>
+          <Select
+            value={fields.pronoun_type ?? ""}
+            onValueChange={(v) => set({ pronoun_type: (v || undefined) as PronounFields["pronoun_type"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="personal">Personal</SelectItem>
+              <SelectItem value="possessive">Possessive</SelectItem>
+              <SelectItem value="reflexive">Reflexive</SelectItem>
+              <SelectItem value="demonstrative">Demonstrative</SelectItem>
+              <SelectItem value="interrogative">Interrogative</SelectItem>
+              <SelectItem value="relative">Relative</SelectItem>
+              <SelectItem value="indefinite">Indefinite</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Person</Label>
+          <Select
+            value={fields.person ?? ""}
+            onValueChange={(v) => set({ person: (v || undefined) as PronounFields["person"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select person" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="first">First</SelectItem>
+              <SelectItem value="second">Second</SelectItem>
+              <SelectItem value="third">Third</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Number</Label>
+          <Select
+            value={fields.number ?? ""}
+            onValueChange={(v) => set({ number: (v || undefined) as PronounFields["number"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select number" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="singular">Singular</SelectItem>
+              <SelectItem value="plural">Plural</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Gender</Label>
+          <Select
+            value={fields.gender ?? ""}
+            onValueChange={(v) => set({ gender: (v || undefined) as PronounFields["gender"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="masculine">Masculine</SelectItem>
+              <SelectItem value="feminine">Feminine</SelectItem>
+              <SelectItem value="neuter">Neuter</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Case</Label>
+          <Select
+            value={fields.case ?? ""}
+            onValueChange={(v) => set({ case: (v || undefined) as PronounFields["case"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select case" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="nominative">Nominative</SelectItem>
+              <SelectItem value="accusative">Accusative</SelectItem>
+              <SelectItem value="dative">Dative</SelectItem>
+              <SelectItem value="genitive">Genitive</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-end pb-1.5">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="pronoun-formal"
+              checked={fields.formal ?? false}
+              onCheckedChange={(v) => set({ formal: v || undefined })}
+            />
+            <Label htmlFor="pronoun-formal" className="text-xs">Formal</Label>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PrepositionFieldsForm({
+  fields,
+  onChange,
+}: {
+  fields: PrepositionFields;
+  onChange: (f: PrepositionFields) => void;
+}) {
+  const set = (partial: Partial<PrepositionFields>) => onChange({ ...fields, ...partial });
+  const [contractionsKey, setContractionsKey] = useState("");
+  const [contractionsValue, setContractionsValue] = useState("");
+
+  function addContraction() {
+    if (!contractionsKey.trim()) return;
+    set({
+      contractions: { ...(fields.contractions ?? {}), [contractionsKey.trim()]: contractionsValue.trim() },
+    });
+    setContractionsKey("");
+    setContractionsValue("");
+  }
+
+  function removeContraction(key: string) {
+    const next = { ...(fields.contractions ?? {}) };
+    delete next[key];
+    set({ contractions: Object.keys(next).length > 0 ? next : undefined });
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        Preposition Details
+      </p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Governed Case</Label>
+          <Select
+            value={fields.case_governed ?? ""}
+            onValueChange={(v) => set({ case_governed: (v || undefined) as PrepositionFields["case_governed"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select case" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="accusative">Accusative</SelectItem>
+              <SelectItem value="dative">Dative</SelectItem>
+              <SelectItem value="genitive">Genitive</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Type</Label>
+          <Select
+            value={fields.preposition_type ?? ""}
+            onValueChange={(v) => set({ preposition_type: (v || undefined) as PrepositionFields["preposition_type"] })}
+          >
+            <SelectTrigger className="h-7 text-xs">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="location">Location</SelectItem>
+              <SelectItem value="time">Time</SelectItem>
+              <SelectItem value="direction">Direction</SelectItem>
+              <SelectItem value="manner">Manner</SelectItem>
+              <SelectItem value="cause">Cause</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs">Contractions</Label>
+        <div className="flex gap-2">
+          <Input
+            className="h-7 flex-1 text-xs"
+            value={contractionsKey}
+            onChange={(e) => setContractionsKey(e.target.value)}
+            placeholder="e.g. zum"
+          />
+          <Input
+            className="h-7 flex-1 text-xs"
+            value={contractionsValue}
+            onChange={(e) => setContractionsValue(e.target.value)}
+            placeholder="e.g. zu + dem"
+          />
+          <Button variant="outline" size="xs" type="button" onClick={addContraction}>
+            Add
+          </Button>
+        </div>
+        {fields.contractions && Object.keys(fields.contractions).length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {Object.entries(fields.contractions).map(([k, v]) => (
+              <Badge key={k} variant="secondary" className="gap-1 text-xs">
+                {k} ← {v}
+                <button
+                  type="button"
+                  onClick={() => removeContraction(k)}
+                  className="ml-0.5 text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Type-specific fields dispatcher ─────────────────────────────
 
 function TypeFieldsForm({
@@ -1002,6 +1315,15 @@ function TypeFieldsForm({
   }
   if (type === "adjective") {
     return <AdjectiveFieldsForm fields={fields as AdjectiveFields} onChange={onChange} />;
+  }
+  if (type === "adverb") {
+    return <AdverbFieldsForm fields={fields as AdverbFields} onChange={onChange} />;
+  }
+  if (type === "pronoun") {
+    return <PronounFieldsForm fields={fields as PronounFields} onChange={onChange} />;
+  }
+  if (type === "preposition") {
+    return <PrepositionFieldsForm fields={fields as PrepositionFields} onChange={onChange} />;
   }
   if (type === "sentence") {
     return <SentenceFieldsForm fields={fields as SentenceFields} onChange={onChange} />;
