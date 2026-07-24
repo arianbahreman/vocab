@@ -137,7 +137,7 @@ export default function Navbar() {
           >
             <Menu className="size-5" />
           </SheetTrigger>
-          <SheetContent side="right" className="w-64 p-0" showCloseButton={false}>
+          <SheetContent side="right" className="flex w-64 flex-col p-0" showCloseButton={false}>
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2 font-semibold">
                 <GraduationCap className="size-5" />
@@ -190,9 +190,11 @@ export default function Navbar() {
                   {item.label}
                 </Link>
               ))}
+            </div>
+            <div className="flex justify-center border-t p-4">
               <Button
                 variant="outline"
-                className="mt-1 w-full justify-start gap-3 px-3"
+                className="w-fit gap-3"
                 onClick={handleLogout}
               >
                 <LogOut className="size-4" />
