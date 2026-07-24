@@ -16,6 +16,7 @@ import {
   X,
   Book,
   ChevronDown,
+  Settings,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -53,6 +54,7 @@ export default function Navbar() {
   const dropdownItems = [
     ...(admin ? [{ href: "/admin", label: "Users", icon: Users }] : []),
     { href: "/statistics", label: "Statistics", icon: BarChart3 },
+    { href: "/settings", label: "Settings", icon: Settings },
   ]
 
   return (

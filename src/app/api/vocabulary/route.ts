@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { currentStreak } from "@/lib/vocab"
+import { requireAdmin } from "@/lib/auth"
 import { defaultFields, type VocabType, type VocabFields } from "@/lib/vocab-types"
 
 interface ImportItem {
@@ -13,6 +14,7 @@ interface ImportItem {
   level?: string
   frequency_rank?: number | null
   fields?: VocabFields
+  is_public?: boolean
 }
 
 const VALID_TYPES = ["noun", "verb", "adjective", "sentence", "phrase"]
@@ -73,10 +75,23 @@ export async function GET(request: Request) {
   const limit = 20
   const offset = (page - 1) * limit
 
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("show_public_vocabs")
+    .eq("user_id", user.id)
+    .single()
+
+  const showPublic = settings?.show_public_vocabs !== false
+
   let query = supabase
     .from("vocabulary")
     .select("*", { count: "exact" })
-    .eq("user_id", user.id)
+
+  if (showPublic) {
+    query = query.or(`user_id.eq.${user.id},is_public.eq.true`)
+  } else {
+    query = query.eq("user_id", user.id)
+  }
 
   if (search) {
     query = query.or(`word.ilike.%${search}%,meaning.ilike.%${search}%`)
@@ -132,6 +147,12 @@ export async function POST(request: Request) {
 
   const body = await request.json()
 
+  const isPublic = body.is_public === true
+  if (isPublic) {
+    const adminCheck = await requireAdmin()
+    if ("error" in adminCheck) return adminCheck.error
+  }
+
   if (body.items) {
     if (!body.language || !Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -152,6 +173,7 @@ export async function POST(request: Request) {
         level: item.level || "intermediate",
         frequency_rank: item.frequency_rank ?? null,
         fields,
+        is_public: item.is_public === true,
       }
     })
 
@@ -189,6 +211,7 @@ export async function POST(request: Request) {
       level: body.level || "intermediate",
       frequency_rank: body.frequency_rank ?? null,
       fields,
+      is_public: isPublic,
     })
     .select()
     .single()

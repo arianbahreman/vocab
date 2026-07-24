@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -71,6 +72,8 @@ import type {
   PhraseFields,
 } from "@/lib/vocab-types";
 import { isNounFields, isVerbFields, isAdjectiveFields, isSentenceFields, isPhraseFields } from "@/lib/vocab-types";
+import { createClient } from "@/lib/supabase/client";
+import { isAdmin } from "@/lib/roles";
 import {
   ChartContainer,
   ChartTooltip,
@@ -101,6 +104,7 @@ interface CsvRow {
 
 interface VocabTableRow {
   id: string
+  user_id: string
   language: string
   type: string
   word: string
@@ -383,7 +387,18 @@ function ImportModal({
   const [importLanguage, setImportLanguage] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function checkAdmin() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setIsAdminUser(isAdmin(user))
+    }
+    checkAdmin()
+  }, [])
 
   async function handleImport() {
     if (!importLanguage || !importFile) return;
@@ -393,10 +408,15 @@ function ImportModal({
       const text = await importFile.text();
       const rows = parseCsv(text);
 
+      const body: Record<string, unknown> = { language: importLanguage, items: rows }
+      if (isAdminUser && isPublic) {
+        body.is_public = true
+      }
+
       const res = await fetch("/api/vocabulary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language: importLanguage, items: rows }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -409,6 +429,7 @@ function ImportModal({
       );
       setImportLanguage("");
       setImportFile(null);
+      setIsPublic(false);
       if (fileRef.current) fileRef.current.value = "";
       onOpenChange(false);
       onImported();
@@ -488,14 +509,31 @@ function ImportModal({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="size-7"
+                  className="size-7 bg-blue-500/10 hover:bg-blue-500/20"
                   title="Import help"
                 >
-                  <HelpCircle className="size-3.5 text-muted-foreground" />
+                  <HelpCircle className="size-3.5 text-blue-600" />
                 </Button>
               </Link>
             </div>
           </div>
+          {isAdminUser && (
+            <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
+              <Switch
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+                className="mt-0.5"
+              />
+              <div className="space-y-0.5">
+                <span className="text-sm font-medium leading-none">
+                  Make available for all users
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  These vocabs will be visible in every user's vocabulary list.
+                </p>
+              </div>
+            </label>
+          )}
         </div>
         <DialogFooter className="flex-row">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -1343,6 +1381,7 @@ export default function VocabularyPage() {
   const [level, setLevel] = useState("");
   const [sort, setSort] = useState("newest");
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -1385,6 +1424,13 @@ export default function VocabularyPage() {
       setLoading(false),
     );
   }, [fetchData, fetchVocabTotal]);
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null)
+    })
+  }, [])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -1760,18 +1806,22 @@ export default function VocabularyPage() {
                     <TableCell>{item.score}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          onClick={() => setEditItem(item)}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                        <DeleteButton
-                          item={item}
-                          onDelete={handleDelete}
-                          setDeleteId={setDeleteId}
-                        />
+                        {currentUserId === item.user_id && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              onClick={() => setEditItem(item)}
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <DeleteButton
+                              item={item}
+                              onDelete={handleDelete}
+                              setDeleteId={setDeleteId}
+                            />
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1813,19 +1863,23 @@ export default function VocabularyPage() {
                 <p className="text-muted-foreground text-xl">{item.meaning}</p>
               </CardContent>
               <CardFooter className="justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() => setEditItem(item)}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-                <DeleteButton
-                  size="icon-sm"
-                  item={item}
-                  onDelete={handleDelete}
-                  setDeleteId={setDeleteId}
-                />
+                {currentUserId === item.user_id && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      onClick={() => setEditItem(item)}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <DeleteButton
+                      size="icon-sm"
+                      item={item}
+                      onDelete={handleDelete}
+                      setDeleteId={setDeleteId}
+                    />
+                  </>
+                )}
               </CardFooter>
             </Card>
           ))

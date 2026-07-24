@@ -168,6 +168,7 @@ export interface VocabularyRow {
   frequency_rank: number | null
   notes: string
   fields: VocabFields
+  is_public: boolean
   score: number
   correct_count: number
   wrong_count: number
